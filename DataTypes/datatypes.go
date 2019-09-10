@@ -12,8 +12,7 @@ type Transaction struct {
 	Timestamp int64
 	Value float64 //could be a string but have to figure out serialization
 	From [65]byte //length of public key 33(compressed) or 65(uncompressed)
-	//Ntips uint16
-	//Tips [Ntips][32]byte
+	Txid [16]byte
 	LeftTip [32]byte
 	RightTip [32]byte
 	Nonce uint32 //temporary based on type of PoW
@@ -32,15 +31,18 @@ type Node struct {
 }
 
 type DAG struct {
-	Mux sync.RWMutex
+	Mux sync.Mutex
+	/*
+	ChTx chan dt.Node
+	ChDuplicateCheck chan string
+	ChTipSelection chan string
+	*/
 	Genisis string
 	Graph map[string] Node // string is the hash of the transaction(Node.Tx)
 }
 
-type RequestTx struct {
-	Hash string
-}
-
-type RequestConnection struct {
+type Request struct {
+	Data []byte
 	IP string
+	Conn net.Conn
 }
