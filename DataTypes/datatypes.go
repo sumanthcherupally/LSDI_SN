@@ -23,7 +23,7 @@ type Peers struct {
 	Fds map[string] net.Conn
 }
 
-type Node struct {
+type Vertex struct {
 	Tx Transaction
 	Signature []byte
 	Neighbours [] string // pointers to the neighbours which gets updated when this node is chosen as tip
@@ -38,7 +38,7 @@ type DAG struct {
 	ChTipSelection chan string
 	*/
 	Genisis string
-	Graph map[string] Node // string is the hash of the transaction(Node.Tx)
+	Graph map[string] Vertex // string is the hash of the transaction(Node.Tx)
 }
 
 type Request struct {
