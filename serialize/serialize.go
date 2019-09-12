@@ -7,7 +7,7 @@ import (
 	"encoding/asn1"
 	"encoding/binary"
 	//"encoding/json"
-	dt "GO-DAG/DataTypes"
+	dt "Go-DAG-storageNode/DataTypes"
 	"fmt"
 )
 

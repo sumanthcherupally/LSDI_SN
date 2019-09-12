@@ -1,10 +1,10 @@
 package storage
 
 import(
-	dt "GO-DAG/DataTypes"
+	dt "Go-DAG-storageNode/DataTypes"
 	"fmt"
-	"GO-DAG/serialize"
-	"GO-DAG/Crypto"
+	"Go-DAG-storageNode/serialize"
+	"Go-DAG-storageNode/Crypto"
 	"sync"
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
@@ -69,7 +69,7 @@ func AddTransaction(dag *dt.DAG,tx dt.Transaction, signature []byte) bool {
 	return duplicationCheck
 }
 
-func AddToDb(serializedNode []byte, Txid [16]byte, h string,tips string,signature []byte) {
+func AddToDb(serializedTx []byte, Txid [16]byte, h string,tips string,signature []byte) {
 	db, err := sql.Open("mysql",
 		"root:sumanth@tcp(127.0.0.1:3306)/dag")
 	if err != nil {
@@ -78,7 +78,7 @@ func AddToDb(serializedNode []byte, Txid [16]byte, h string,tips string,signatur
 	defer db.Close()
 
 	stmt, err := db.Prepare("INSERT INTO storage(Hash_tx,Txid,Transaction,Tips,Signature) VALUES(?,?,?,?,?)")
-	res, err := stmt.Exec(h,Txid,serializedNode,tips,signature)
+	res, err := stmt.Exec(h,Txid,serializedTx,tips,signature)
 	if err != nil {
 	log.Fatal(err)
 	}
