@@ -41,7 +41,7 @@ func HandleQuery(w http.ResponseWriter, r *http.Request) {
 	Resp := verifyQueryResp{}
 	queryStr := `SELECT Transaction FROM storage WHERE Txid = ?` // check err
 	err1 := db.QueryRow(queryStr, query.Txid).Scan(&Resp.tx)
-	if err != nil {
+	if err1 != nil {
 		log.Fatal(err1)
 	}
 	RespToSend ,err := json.Marshal(Resp)
