@@ -15,19 +15,7 @@ import(
 
 type Server struct {
 	Peers *dt.Peers
-	Dag *dt.DAG
 }
-
-func GetKeys(Graph map[string]dt.Node) []string {
-	var keys []string
-	for k,v := range Graph {
-		if len(v.Neighbours) < 2 {
-			keys = append(keys,k)
-		}
-	}
-	return keys
-}
-
 
 func (srv *Server) HandleConnection(connection net.Conn) {
 	// each connection is handled in a seperate go routine
@@ -70,9 +58,7 @@ func (srv *Server) HandleConnection(connection net.Conn) {
 			fmt.Println(err)
 			break
 		}
-		if len(buf) > 0 {
-			go srv.HandleRequests(connection,buf,ip)
-		}
+		go srv.HandleRequests(connection,buf,ip)
 	}
 	defer connection.Close()
 }
@@ -85,37 +71,26 @@ func (srv *Server)HandleRequests (connection net.Conn,data []byte, IP string) {
 		if ValidTransaction(tx,sign) { 
 			// maybe wasting verifying duplicate transactions, 
 			// instead verify signatures and PoW while tip selection
-			if storage.AddTransaction(srv.Dag,tx,sign) {
+			if storage.AddTransaction(tx,sign) {
 				srv.ForwardTransaction(data,IP)
 			}
 		}
 	} else if magic_number == 2 {
 		// request to give the hashes of tips 
-		srv.Dag.Mux.Lock()
-		ser,_ := json.Marshal(GetKeys(srv.Dag.Graph))
-		srv.Dag.Mux.Unlock()
+		ser,_ := json.Marshal(storage.GetAllHashes())
 		connection.Write(ser)
 	} else if magic_number == 3 {
 		// request to give transactions based on tips
 		hash := data[4:36]
 		str := Crypto.EncodeToHex(hash)
-		srv.Dag.Mux.Lock()
-		tx,sign := srv.Dag.Graph[str].Tx,srv.Dag.Graph[str].Signature
-		srv.Dag.Mux.Unlock()
-		reply := serialize.SerializeData(tx)
+		tx := storage.GetTransaction(str)
+		sign := storage.GetSignature(str)
+		reply := tx
 		var l uint32
 		l = uint32(len(reply))
 		reply = append(reply,sign...)
 		reply = append(serialize.EncodeToBytes(l),reply...)
 		connection.Write(reply)
-	} else if magic_number == 4{
-		// Not relevant but given hash it responds with hashes of neighbours
-		hash := data[4:36]
-		str := Crypto.EncodeToHex(hash)
-		srv.Dag.Mux.Lock()
-		reply,_ := json.Marshal(srv.Dag.Graph[str].Neighbours)
-		srv.Dag.Mux.Unlock()
-		connection.Write(reply) 
 	} else {
 		fmt.Println("Failed Request")
 	}
