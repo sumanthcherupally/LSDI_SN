@@ -49,6 +49,15 @@ func DeserializeTransaction(b []byte) (dt.Transaction,[]byte) {
 	return tx,signature
 }
 
+func Deserializedata(b []byte) (dt.Transaction) {
+	r := bytes.NewReader(b)
+	var tx dt.Transaction
+	err := binary.Read(r,binary.LittleEndian,&tx)
+	if err != nil { 
+		fmt.Println(err)
+	}
+	return tx
+}
 
 func canonicalizeInt(val *big.Int) []byte {
 	b := val.Bytes()
