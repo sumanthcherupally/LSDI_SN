@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"encoding/json"
 	"database/sql"
+	"Go-DAG-storageNode/serialize"
 	_ "github.com/go-sql-driver/mysql"
+	"Go-DAG-storageNode/Crypto"
 )
 
 type verifyQuery struct{
@@ -14,7 +16,11 @@ type verifyQuery struct{
 }
 
 type verifyQueryResp struct{
-	tx []byte
+	tx string
+}
+
+type send struct{
+	Hash [32]byte
 }
 
 // type dbResponse struct {
@@ -44,13 +50,16 @@ func HandleQuery(w http.ResponseWriter, r *http.Request) {
 	if err1 != nil {
 		log.Fatal(err1)
 	}
-	RespToSend ,err := json.Marshal(Resp)
+	RespToSend := serialize.Deserializedata(Crypto.DecodeToBytes(Resp.tx))
+	qq := send{}
+	qq.Hash = RespToSend.Hash
+	ww ,err := json.Marshal(qq)
 	if err != nil{
 		panic(err)
 	}
 	w.Header().Set("Content-Type","application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(RespToSend)
+	w.Write(ww)
 }
 
 func StartServer() {

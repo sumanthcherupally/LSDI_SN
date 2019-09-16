@@ -6,6 +6,7 @@ import (
 	"Go-DAG-storageNode/storage"
 	"encoding/json"
 	"encoding/hex"
+	"fmt"
 )
 
 // RequestHashes requests all the hashes of Transactions in the DAG
@@ -19,13 +20,18 @@ func RequestHashes(conn net.Conn) []string{
 	for {
 		buf := make([]byte,1024)
 		length,_ := conn.Read(buf)
-		serialMsg = append(serialMsg,buf...)
 		if length < 1024 {
+			serialMsg = append(serialMsg,buf[:length]...)
 			break
+		} else{
+			serialMsg = append(serialMsg,buf...)
 		}
 	}
 	var hashes []string
-	json.Unmarshal(serialMsg,&hashes)
+	err := json.Unmarshal(serialMsg,&hashes)
+	if err!=nil{
+		fmt.Println(err)
+	}
 	return hashes
 }
 
@@ -40,7 +46,7 @@ func QueryTransactions(conn net.Conn, hashes []string) {
 		conn.Write(b)
 		buf := make([]byte,1024)
 		length,_ := conn.Read(buf)
-		tx,sign = serialize.DeserializeTransaction(buf[:l])
+		tx,sign := serialize.DeserializeTransaction(buf[:length])
 		storage.AddTransaction(tx,sign)
 	}
 }

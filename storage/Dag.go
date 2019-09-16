@@ -11,6 +11,7 @@ import(
 	"log"
 )
 
+
 var OrphanedTransactions = make(map[string]dt.Vertex)
 var Mux sync.Mutex 
 
@@ -18,6 +19,17 @@ var Mux sync.Mutex
 func AddTransaction(tx dt.Transaction, signature []byte) bool {
 
 	// change this function for the storage Node
+	if tx.Timestamp == 0 {
+		serializedTx := Crypto.EncodeToHex(serialize.SerializeData(tx))
+		Txid := [16]byte(tx.Txid)
+		left := Crypto.EncodeToHex(tx.LeftTip[:])
+		right := Crypto.EncodeToHex(tx.RightTip[:])
+		tips := left+","+right
+		hash := Crypto.Hash(serialize.SerializeData(tx))
+		h := Crypto.EncodeToHex(hash[:])
+		AddToDb(serializedTx,Txid,h,tips,signature)
+		return true
+	}
 	var Vertex dt.Vertex
 	var duplicationCheck bool
 	duplicationCheck = false
@@ -44,7 +56,7 @@ func AddTransaction(tx dt.Transaction, signature []byte) bool {
 		} else {
 			// l := getTx(left)
 			// r := getTx(right)
-			serializedTx := serialize.EncodeToBytes(tx)
+			serializedTx := Crypto.EncodeToHex(serialize.SerializeData(tx))
 			tips := left+","+right
 			Txid := tx.Txid
 			AddToDb(serializedTx,Txid,h,tips,signature)
@@ -67,7 +79,7 @@ func AddTransaction(tx dt.Transaction, signature []byte) bool {
 	return duplicationCheck
 }
 
-func AddToDb(serializedTx []byte, Txid [16]byte, h string,tips string,signature []byte) {
+func AddToDb(serializedTx string, Txid [16]byte, h string,tips string,signature []byte) {
 	db, err := sql.Open("mysql","root:sumanth@tcp(127.0.0.1:3306)/dag")
 	if err != nil {
 		log.Fatal(err)
@@ -75,11 +87,10 @@ func AddToDb(serializedTx []byte, Txid [16]byte, h string,tips string,signature 
 	defer db.Close()
 
 	stmt, err := db.Prepare("INSERT INTO storage(Hash_tx,Txid,Transaction,Tips,Signature) VALUES(?,?,?,?,?)")
-	res, err := stmt.Exec(h,Txid,serializedTx,tips,signature)
+	_, err = stmt.Exec(h,Crypto.EncodeToHex(Txid[:]),serializedTx,tips,signature)
 	if err != nil {
 	log.Fatal(err)
 	}
-	fmt.Println(res)
 }
 
 func GetAllHashes() []string {
@@ -88,7 +99,7 @@ func GetAllHashes() []string {
 		log.Fatal(err)
 	}
 	defer db.Close()
-	stmt, err := db.Prepare("SELECT EXISTS(SELECT Hash_tx FROM storage)")
+	stmt, err := db.Prepare("SELECT Hash_tx FROM storage")
 	rows, err := stmt.Query()
 	if err != nil {
 		log.Fatal(err)
@@ -106,19 +117,19 @@ func GetAllHashes() []string {
 	return Hashes
 }
 
-func GetTransaction(hash string) []byte {
+func GetTransaction(hash string) dt.Transaction {
 	db, err := sql.Open("mysql","root:sumanth@tcp(127.0.0.1:3306)/dag")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
-	Resp := make([]byte,0)
+	var Resp string
 	queryStr := `SELECT Transaction FROM storage WHERE Hash_tx = ?` // check err
 	err1 := db.QueryRow(queryStr, hash).Scan(&Resp)
 	if err1 != nil {
 		log.Fatal(err1)
 	}
-	return Resp
+	return serialize.Deserializedata(Crypto.DecodeToBytes(Resp))
 }
 
 func GetSignature(hash string) []byte {
@@ -149,6 +160,7 @@ func checkifPresentDb(h string) bool{
 	}
 	defer res.Close()
 	var present int
+	res.Next()
 	err1 := res.Scan(&present)
 	if err1 != nil {
 		log.Fatal(err1)
@@ -168,9 +180,9 @@ func checkOrphanedTransactions(h string) {
 		if AddTransaction(Vertex.Tx,Vertex.Signature) {
 			fmt.Println("resolved Transaction")
 		}
+		Mux.Lock()
+		delete(OrphanedTransactions,h)
+		Mux.Unlock()
 	}
-	Mux.Lock()
-	delete(OrphanedTransactions,h)
-	Mux.Unlock()
 	return 
 }

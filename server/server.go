@@ -85,7 +85,7 @@ func (srv *Server)HandleRequests (connection net.Conn,data []byte, IP string) {
 		str := Crypto.EncodeToHex(hash)
 		tx := storage.GetTransaction(str)
 		sign := storage.GetSignature(str)
-		reply := tx
+		reply := serialize.SerializeData(tx)
 		var l uint32
 		l = uint32(len(reply))
 		reply = append(reply,sign...)

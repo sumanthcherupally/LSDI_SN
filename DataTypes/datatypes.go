@@ -10,7 +10,7 @@ import(
 type Transaction struct {
 	// Definition of data
 	Timestamp int64
-	Value float64 //could be a string but have to figure out serialization
+	Hash [32]byte //could be a string but have to figure out serialization
 	From [65]byte //length of public key 33(compressed) or 65(uncompressed)
 	Txid [16]byte
 	LeftTip [32]byte
