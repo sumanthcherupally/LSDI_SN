@@ -4,7 +4,6 @@ import (
 	"net"
 	"Go-DAG-storageNode/serialize"
 	"Go-DAG-storageNode/storage"
-	"Go-DAG-storageNode/Crypto"
 	"encoding/json"
 	"encoding/hex"
 	"fmt"
@@ -51,20 +50,21 @@ func QueryTransactions(conn net.Conn, hashes []string) {
 		storage.AddTransaction(tx,sign)
 	}
 
-	missingTxs := requestMissingTransacions()
-	fmt.Println(len(missingTxs))
+	// missingTxs := requestMissingTransacions()
+	// fmt.Println(len(missingTxs))
 
-	for _,v := range missingTxs {
-		b,_ := hex.DecodeString(v)
-		b = append(bytes,b...)
-		conn.Write(b)
-		buf := make([]byte,1024)
-		length,_ := conn.Read(buf)
-		tx,sign := serialize.DeserializeTransaction(buf[:length])
-		storage.AddTransaction(tx,sign)
-	}
+	// for _,v := range missingTxs {
+	// 	b,_ := hex.DecodeString(v)
+	// 	b = append(bytes,b...)
+	// 	conn.Write(b)
+	// 	buf := make([]byte,1024)
+	// 	length,_ := conn.Read(buf)
+	// 	tx,sign := serialize.DeserializeTransaction(buf[:length])
+	// 	storage.AddTransaction(tx,sign)
+	// }
 }
 
+/*
 func requestMissingTransacions() ([]string){
 
 	var missingTransactions []string
@@ -88,3 +88,4 @@ func requestMissingTransacions() ([]string){
 	return missingTransactions
 
 }
+*/
