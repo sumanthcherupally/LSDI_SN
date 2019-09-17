@@ -12,7 +12,7 @@ import(
 )
 
 
-var OrphanedTransactions = make(map[string]dt.Vertex)
+var OrphanedTransactions = make(map[string] []dt.Vertex)
 var Mux sync.Mutex 
 
 
@@ -42,16 +42,16 @@ func AddTransaction(tx dt.Transaction, signature []byte) bool {
 		Vertex.Signature = signature
 		left := Crypto.EncodeToHex(tx.LeftTip[:])
 		right := Crypto.EncodeToHex(tx.RightTip[:]) 
-		ok_l := checkifPresentDb(left)
-		ok_r := checkifPresentDb(right)
-		if !ok_l || !ok_r {
-			if !ok_l {
-				OrphanedTransactions[left] = Vertex
+		okL := checkifPresentDb(left)
+		okR := checkifPresentDb(right)
+		if !okL || !okR {
+			if !okL {
+				OrphanedTransactions[left] = append(OrphanedTransactions[left],Vertex)
 				fmt.Println("Orphaned Transactions")	
 			}
-			if !ok_r {
+			if !okR {
 				fmt.Println("Orphaned Transactions")
-				OrphanedTransactions[right] = Vertex
+				OrphanedTransactions[right] = append(OrphanedTransactions[right],Vertex)
 			}
 		} else {
 			// l := getTx(left)
@@ -93,6 +93,7 @@ func AddToDb(serializedTx string, Txid [16]byte, h string,tips string,signature 
 	}
 }
 
+
 func GetAllHashes() []string {
 	db, err := sql.Open("mysql","root:sumanth@tcp(127.0.0.1:3306)/dag")
 	if err != nil {
@@ -117,6 +118,7 @@ func GetAllHashes() []string {
 	return Hashes
 }
 
+// GetTransaction returns transaction based on hash value.
 func GetTransaction(hash string) dt.Transaction {
 	db, err := sql.Open("mysql","root:sumanth@tcp(127.0.0.1:3306)/dag")
 	if err != nil {
@@ -132,6 +134,7 @@ func GetTransaction(hash string) dt.Transaction {
 	return serialize.Deserializedata(Crypto.DecodeToBytes(Resp))
 }
 
+// GetSignature returns signature of tranasction based on hash value.
 func GetSignature(hash string) []byte {
 	db, err := sql.Open("mysql","root:sumanth@tcp(127.0.0.1:3306)/dag")
 	if err != nil {
@@ -174,11 +177,13 @@ func checkifPresentDb(h string) bool{
 
 func checkOrphanedTransactions(h string) {
 	Mux.Lock()
-	Vertex,ok := OrphanedTransactions[h]
+	vertices,ok := OrphanedTransactions[h]
 	Mux.Unlock()
 	if ok {
-		if AddTransaction(Vertex.Tx,Vertex.Signature) {
-			fmt.Println("resolved Transaction")
+		for _,vertex := range vertices {
+			if AddTransaction(vertex.Tx,vertex.Signature) {
+				fmt.Println("resolved Transaction")
+			}
 		}
 		Mux.Lock()
 		delete(OrphanedTransactions,h)
