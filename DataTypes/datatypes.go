@@ -10,12 +10,12 @@ import(
 type Transaction struct {
 	// Definition of data
 	Timestamp int64
-	Hash [32]byte //could be a string but have to figure out serialization
+	Hash [32]byte
 	From [65]byte //length of public key 33(compressed) or 65(uncompressed)
 	Txid [16]byte
 	LeftTip [32]byte
 	RightTip [32]byte
-	Nonce uint32 //temporary based on type of PoW
+	Nonce uint32
 }
 
 type Peers struct {

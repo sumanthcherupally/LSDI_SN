@@ -20,7 +20,7 @@ type verifyQueryResp struct{
 }
 
 type send struct{
-	Hash [32]byte
+	Hash string
 }
 
 // type dbResponse struct {
@@ -52,7 +52,7 @@ func HandleQuery(w http.ResponseWriter, r *http.Request) {
 	}
 	RespToSend := serialize.Deserializedata(Crypto.DecodeToBytes(Resp.tx))
 	qq := send{}
-	qq.Hash = RespToSend.Hash
+	qq.Hash = Crypto.EncodeToHex(RespToSend.Hash[:])
 	ww ,err := json.Marshal(qq)
 	if err != nil{
 		panic(err)

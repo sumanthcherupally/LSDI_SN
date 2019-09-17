@@ -24,7 +24,7 @@ func GetIps(Addrs string) []string {
 	tcpAddr, _ := net.ResolveTCPAddr("tcp4", Addrs)
 	conn,_ := net.DialTCP("tcp",nil,tcpAddr)
 	var req Request
-	req.NodeType = "GatewayNode"
+	req.NodeType = "StorageNode"
 	request,err := json.Marshal(req)
 	if err != nil {
 		fmt.Println(err)
