@@ -24,10 +24,9 @@ func AddTransaction(tx dt.Transaction, signature []byte) bool {
 		Txid := [16]byte(tx.Txid)
 		left := Crypto.EncodeToHex(tx.LeftTip[:])
 		right := Crypto.EncodeToHex(tx.RightTip[:])
-		tips := left+","+right
 		hash := Crypto.Hash(serialize.SerializeData(tx))
 		h := Crypto.EncodeToHex(hash[:])
-		AddToDb(serializedTx,Txid,h,tips,signature)
+		AddToDb(serializedTx,Txid,h,left,right,signature)
 		return true
 	}
 	var Vertex dt.Vertex
@@ -57,9 +56,8 @@ func AddTransaction(tx dt.Transaction, signature []byte) bool {
 			// l := getTx(left)
 			// r := getTx(right)
 			serializedTx := Crypto.EncodeToHex(serialize.SerializeData(tx))
-			tips := left+","+right
 			Txid := tx.Txid
-			AddToDb(serializedTx,Txid,h,tips,signature)
+			AddToDb(serializedTx,Txid,h,left,right,signature)
 			// if left == right {
 			// 	l.Neighbours = append(l.Neighbours,h)
 			// 	dag.Graph[Crypto.EncodeToHex(tx.LeftTip[:])] = l
@@ -79,15 +77,15 @@ func AddTransaction(tx dt.Transaction, signature []byte) bool {
 	return duplicationCheck
 }
 
-func AddToDb(serializedTx string, Txid [16]byte, h string,tips string,signature []byte) {
+func AddToDb(serializedTx string, Txid [16]byte, h string,left string,right string,signature []byte) {
 	db, err := sql.Open("mysql","root:sumanth@tcp(127.0.0.1:3306)/dag")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 
-	stmt, err := db.Prepare("INSERT INTO storage(Hash_tx,Txid,Transaction,Tips,Signature) VALUES(?,?,?,?,?)")
-	_, err = stmt.Exec(h,Crypto.EncodeToHex(Txid[:]),serializedTx,tips,signature)
+	stmt, err := db.Prepare("INSERT INTO storage(Hash_tx,Txid,Transaction,Left_tip,Right_tip,Signature) VALUES(?,?,?,?,?)")
+	_, err = stmt.Exec(h,Crypto.EncodeToHex(Txid[:]),serializedTx,left,right,signature)
 	if err != nil {
 	log.Fatal(err)
 	}
