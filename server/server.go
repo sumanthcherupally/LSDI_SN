@@ -11,13 +11,14 @@ import(
 	"Go-DAG-storageNode/storage"
 	"encoding/json"
 	"strings"
+	"sync"
 )
 
 type Server struct {
 	Peers *dt.Peers
 }
 
-func (srv *Server) HandleConnection(connection net.Conn) {
+func (srv *Server) HandleConnection(connection net.Conn,dbLock *sync.Mutex) {
 	// each connection is handled in a seperate go routine
 	addr := connection.RemoteAddr().String()
 	ip := addr[:strings.IndexByte(addr,':')]
@@ -58,22 +59,26 @@ func (srv *Server) HandleConnection(connection net.Conn) {
 			fmt.Println(err)
 			break
 		}
-		go srv.HandleRequests(connection,buf,ip)
+		go srv.HandleRequests(connection,buf,ip,dbLock)
 	}
 	defer connection.Close()
 }
 
 
-func (srv *Server)HandleRequests (connection net.Conn,data []byte, IP string) {
+func (srv *Server)HandleRequests (connection net.Conn,data []byte, IP string, dbLock *sync.Mutex) {
 	magic_number := binary.LittleEndian.Uint32(data[:4])
 	if magic_number == 1 {
 		tx,sign := serialize.DeserializeTransaction(data[4:])
 		if ValidTransaction(tx,sign) { 
 			// maybe wasting verifying duplicate transactions, 
 			// instead verify signatures and PoW while tip selection
-			if storage.AddTransaction(tx,sign) {
+			dbLock.Lock()
+			added := storage.AddTransaction(tx,sign)
+			dbLock.Unlock()
+			if added {
 				srv.ForwardTransaction(data,IP)
 			}
+			
 		}
 	} else if magic_number == 2 {
 		// request to give the hashes of tips 
@@ -127,9 +132,10 @@ func (srv *Server)ForwardTransaction(t []byte, IP string) {
 
 func (srv *Server)StartServer() {
 	listener, _ := net.Listen("tcp",":9000")
+	var dbLock sync.Mutex
 	for {
 		conn, _ := listener.Accept()
- 		go srv.HandleConnection(conn) 
+ 		go srv.HandleConnection(conn,&dbLock) 
  		// go routine executes concurrently
 	}
 	defer listener.Close()

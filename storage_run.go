@@ -6,7 +6,7 @@ import (
 	"Go-DAG-storageNode/query"
 	"Go-DAG-storageNode/Discovery"
 	"Go-DAG-storageNode/sync"
-	//"Go-DAG-storageNode/storage"
+	"Go-DAG-storageNode/storage"
 	"net"
 	"fmt"
 	"time"
@@ -34,6 +34,7 @@ func main() {
 	// for _,node := range storage.OrphanedTransactions {
 	// 	storage.AddTransaction(node.Tx,node.Signature)
 	// }
+	fmt.Println(len(storage.OrphanedTransactions))
 	fmt.Println("Database synced")
 	query.StartServer()
 }

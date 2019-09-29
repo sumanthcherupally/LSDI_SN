@@ -19,7 +19,7 @@ var Mux sync.Mutex
 func AddTransaction(tx dt.Transaction, signature []byte) bool {
 
 	// change this function for the storage Node
-	if tx.Timestamp == 0 {
+	if tx.Timestamp == 0 { 						//To add the genesis tx to the db
 		serializedTx := Crypto.EncodeToHex(serialize.SerializeData(tx))
 		Txid := [16]byte(tx.Txid)
 		left := Crypto.EncodeToHex(tx.LeftTip[:])
@@ -35,7 +35,7 @@ func AddTransaction(tx dt.Transaction, signature []byte) bool {
 	s := serialize.SerializeData(tx)
 	hash := Crypto.Hash(s)
 	h := Crypto.EncodeToHex(hash[:])
-
+	
 	if !checkifPresentDb(h){  //Duplication check
 		Vertex.Tx = tx
 		Vertex.Signature = signature
@@ -84,7 +84,7 @@ func AddToDb(serializedTx string, Txid [16]byte, h string,left string,right stri
 	}
 	defer db.Close()
 
-	stmt, err := db.Prepare("INSERT INTO storage(Hash_tx,Txid,Transaction,Left_tip,Right_tip,Signature) VALUES(?,?,?,?,?)")
+	stmt, err := db.Prepare("INSERT INTO storage(Hash_tx,Txid,Transaction,Left_tip,Right_tip,Signature) VALUES(?,?,?,?,?,?)")
 	_, err = stmt.Exec(h,Crypto.EncodeToHex(Txid[:]),serializedTx,left,right,signature)
 	if err != nil {
 	log.Fatal(err)
@@ -113,6 +113,7 @@ func GetAllHashes() []string {
 		}
 		Hashes = append(Hashes, u)
 	}
+	fmt.Println(len(Hashes))
 	return Hashes
 }
 
@@ -124,7 +125,7 @@ func GetTransaction(hash string) dt.Transaction {
 	}
 	defer db.Close()
 	var Resp string
-	queryStr := `SELECT Transaction FROM storage WHERE Hash_tx = ?` // check err
+	queryStr := "SELECT Transaction FROM storage WHERE Hash_tx = ?" // check err
 	err1 := db.QueryRow(queryStr, hash).Scan(&Resp)
 	if err1 != nil {
 		log.Fatal(err1)
