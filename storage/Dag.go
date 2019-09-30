@@ -78,7 +78,7 @@ func AddTransaction(tx dt.Transaction, signature []byte) bool {
 }
 
 func AddToDb(serializedTx string, Txid [16]byte, h string,left string,right string,signature []byte) {
-	db, err := sql.Open("mysql","root:sumanth@tcp(127.0.0.1:3306)/dag")
+	db, err := sql.Open("mysql","Sumanth:sumanth@tcp(127.0.0.1:3306)/dag")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -93,7 +93,7 @@ func AddToDb(serializedTx string, Txid [16]byte, h string,left string,right stri
 
 
 func GetAllHashes() []string {
-	db, err := sql.Open("mysql","root:sumanth@tcp(127.0.0.1:3306)/dag")
+	db, err := sql.Open("mysql","Sumanth:sumanth@tcp(127.0.0.1:3306)/dag")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -119,7 +119,7 @@ func GetAllHashes() []string {
 
 // GetTransaction returns transaction based on hash value.
 func GetTransaction(hash string) dt.Transaction {
-	db, err := sql.Open("mysql","root:sumanth@tcp(127.0.0.1:3306)/dag")
+	db, err := sql.Open("mysql","Sumanth:sumanth@tcp(127.0.0.1:3306)/dag")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -135,7 +135,7 @@ func GetTransaction(hash string) dt.Transaction {
 
 // GetSignature returns signature of tranasction based on hash value.
 func GetSignature(hash string) []byte {
-	db, err := sql.Open("mysql","root:sumanth@tcp(127.0.0.1:3306)/dag")
+	db, err := sql.Open("mysql","Sumanth:sumanth@tcp(127.0.0.1:3306)/dag")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -150,7 +150,7 @@ func GetSignature(hash string) []byte {
 }
 
 func checkifPresentDb(h string) bool{
-	db, err := sql.Open("mysql","root:sumanth@tcp(127.0.0.1:3306)/dag")
+	db, err := sql.Open("mysql","Sumanth:sumanth@tcp(127.0.0.1:3306)/dag")
 	if err != nil {
 		log.Fatal(err)
 	}
