@@ -22,7 +22,7 @@ func main() {
 	srv.Peers = &peers
 	go srv.StartServer()
 	time.Sleep(time.Second)
-	ips := Discovery.GetIps("192.168.43.31:8000")
+	ips := Discovery.GetIps("169.254.175.29:8000")
 	peers.Mux.Lock()
 	peers.Fds = Discovery.ConnectToServer(ips)
 	peers.Mux.Unlock()

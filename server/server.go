@@ -36,14 +36,18 @@ func (srv *Server) HandleConnection(connection net.Conn,dbLock *sync.Mutex) {
 	for {
 		var buf []byte
 		buf1 := make([]byte,8) // reading the header 
-		_,err := connection.Read(buf1)
+		headerLen,err := connection.Read(buf1)
 		magic_number := binary.LittleEndian.Uint32(buf1[:4]) 
 		// specifies the type of the message
 		if magic_number == 1 { 
-			length := binary.LittleEndian.Uint32(buf1[4:8])
-			buf2 := make([]byte,length+72)
-			l,_ := connection.Read(buf2)
-			buf = append(buf1,buf2[:l]...)
+			if headerLen < 8 {
+				fmt.Println("message broken")
+			} else { 
+				length := binary.LittleEndian.Uint32(buf1[4:8])
+				buf2 := make([]byte,length+72)
+				l,_ := connection.Read(buf2)
+				buf = append(buf1,buf2[:l]...)
+			}
 		} else if magic_number == 2 {
 			buf = buf1
 		} else if magic_number == 3 {
@@ -59,7 +63,9 @@ func (srv *Server) HandleConnection(connection net.Conn,dbLock *sync.Mutex) {
 			fmt.Println(err)
 			break
 		}
-		go srv.HandleRequests(connection,buf,ip,dbLock)
+		if len(buf) > 0 { 
+			srv.HandleRequests(connection,buf,ip,dbLock)
+		}
 	}
 	defer connection.Close()
 }
