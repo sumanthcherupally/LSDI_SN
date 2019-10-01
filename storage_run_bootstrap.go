@@ -6,8 +6,8 @@ import (
 	"Go-DAG-storageNode/query"
 	"Go-DAG-storageNode/Discovery"
 	"Go-DAG-storageNode/storage"
+	log "Go-DAG-storageNode/logdump"
 	"net"
-	"fmt"
 	"time"
 	"math/rand"
 )
@@ -28,7 +28,6 @@ func main() {
 	peers.Mux.Lock()
 	peers.Fds = Discovery.ConnectToServer(ips)
 	peers.Mux.Unlock()
-	fmt.Println("started storage node")
-	fmt.Println("=============================")
+	log.Println("started storage node")
 	query.StartServer()
 }

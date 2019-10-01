@@ -6,9 +6,10 @@ import (
 	"Go-DAG-storageNode/query"
 	"Go-DAG-storageNode/Discovery"
 	"Go-DAG-storageNode/sync"
-	"Go-DAG-storageNode/storage"
+	// "Go-DAG-storageNode/storage"
+	log "Go-DAG-storageNode/logdump"
 	"net"
-	"fmt"
+	// "log"
 	"time"
 	"math/rand"
 	"strings"
@@ -21,27 +22,24 @@ func main() {
 	var srv server.Server
 	srv.Peers = &peers
 	go srv.StartServer()
-	fmt.Println("=============================\n")
-	fmt.Println("discovering other nodes..")
+	log.Println("discovering other nodes..")
 	time.Sleep(3*time.Second)
 	ips := Discovery.GetIps("169.254.175.29:8000")
 	peers.Mux.Lock()
 	peers.Fds = Discovery.ConnectToServer(ips)
 	peers.Mux.Unlock()
-	fmt.Println("connected to peers")
-	fmt.Println("=============================\n")
-	fmt.Println("syncing database..")
+	log.Println("connected to peers")
+	log.Println("syncing database..")
 	time.Sleep(2*time.Second)
 	hashes := sync.RequestHashes(peers.Fds[ips[0][:strings.IndexByte(ips[0],':')]])
-	fmt.Println(len(hashes))
+	// log.Println(len(hashes))
 	sync.QueryTransactions(peers.Fds[ips[0][:strings.IndexByte(ips[0],':')]],hashes)
 	// for _,node := range storage.OrphanedTransactions {
 	// 	storage.AddTransaction(node.Tx,node.Signature)
 	// }
-	fmt.Println(len(storage.OrphanedTransactions))
-	fmt.Println("database updated")
+	// log.Println(len(storage.OrphanedTransactions))
+	log.Println("database updated")
 	time.Sleep(2*time.Second)
-	fmt.Println("storage node started")
-	fmt.Println("=============================\n")
+	log.Println("storage node started")
 	query.StartServer()
 }
