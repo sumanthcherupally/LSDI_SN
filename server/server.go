@@ -3,7 +3,7 @@ package server
 import(
 	"fmt"
 	"net"
-	//"time"
+	"time"
 	"encoding/binary"
 	dt "Go-DAG-storageNode/DataTypes"
 	"Go-DAG-storageNode/Crypto"
@@ -29,7 +29,9 @@ func (srv *Server) HandleConnection(connection net.Conn,dbLock *sync.Mutex) {
 			fmt.Println("Connection Unsuccessful")
 		} else {
 			srv.Peers.Fds[ip] = c
-			fmt.Println("Connection Successful")
+			fmt.Println("=============================\n")
+			fmt.Println("Connection with peer Successful")
+			fmt.Println("=============================\n")
 		}
 	}
 	srv.Peers.Mux.Unlock()
@@ -42,7 +44,7 @@ func (srv *Server) HandleConnection(connection net.Conn,dbLock *sync.Mutex) {
 		if magic_number == 1 { 
 			if headerLen < 8 {
 				fmt.Println("message broken")
-			} else { 
+			} else {
 				length := binary.LittleEndian.Uint32(buf1[4:8])
 				buf2 := make([]byte,length+72)
 				l,_ := connection.Read(buf2)
@@ -63,7 +65,7 @@ func (srv *Server) HandleConnection(connection net.Conn,dbLock *sync.Mutex) {
 			fmt.Println(err)
 			break
 		}
-		if len(buf) > 0 { 
+		if len(buf) > 0 {
 			srv.HandleRequests(connection,buf,ip,dbLock)
 		}
 	}
@@ -82,7 +84,15 @@ func (srv *Server)HandleRequests (connection net.Conn,data []byte, IP string, db
 			added := storage.AddTransaction(tx,sign)
 			dbLock.Unlock()
 			if added {
+				fmt.Println("=============================\n")
+				fmt.Println("Recieved tranasction")
+				time.Sleep(1*time.Second)
+				fmt.Println("Verified transaction Pow and Signature")
+				time.Sleep(1*time.Second)
+				fmt.Println("Added to database")
 				srv.ForwardTransaction(data,IP)
+				fmt.Println("Forwarded to other peers")
+				fmt.Println("=============================\n")
 			}
 			
 		}

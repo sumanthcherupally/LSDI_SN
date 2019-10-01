@@ -46,10 +46,10 @@ func AddTransaction(tx dt.Transaction, signature []byte) bool {
 		if !okL || !okR {
 			if !okL {
 				OrphanedTransactions[left] = append(OrphanedTransactions[left],Vertex)
-				fmt.Println("Orphaned Transactions")	
+				//fmt.Println("Orphaned Transactions")	
 			}
 			if !okR {
-				fmt.Println("Orphaned Transactions")
+				//fmt.Println("Orphaned Transactions")
 				OrphanedTransactions[right] = append(OrphanedTransactions[right],Vertex)
 			}
 		} else {
@@ -181,7 +181,7 @@ func checkOrphanedTransactions(h string) {
 	if ok {
 		for _,vertex := range vertices {
 			if AddTransaction(vertex.Tx,vertex.Signature) {
-				fmt.Println("resolved Transaction")
+				//fmt.Println("resolved transaction")
 			}
 		}
 		Mux.Lock()

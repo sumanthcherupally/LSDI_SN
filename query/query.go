@@ -37,8 +37,10 @@ func HandleQuery(w http.ResponseWriter, r *http.Request) {
 	if err != nil{
 		panic(err)
 	}
+	fmt.Println("=============================")
+	fmt.Println("recieved query request")
 
-	db, err := sql.Open("mysql","root:sumanth@tcp(127.0.0.1:3306)/dag")
+	db, err := sql.Open("mysql","Sumanth:sumanth@tcp(127.0.0.1:3306)/dag")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -60,13 +62,14 @@ func HandleQuery(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type","application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(ww)
+	fmt.Println("served query request for Txid-",query.Txid)
+	fmt.Println("=============================")
 }
 
 func StartServer() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/query",HandleQuery)
- 
-    fmt.Printf("Started server for querying HTTP POST...\n")
+    //fmt.Printf("Started server for querying HTTP POST...\n")
     if err := http.ListenAndServe(":8080", mux); err != nil {
         log.Fatal(err)
     }

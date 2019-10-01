@@ -28,6 +28,7 @@ func main() {
 	peers.Mux.Lock()
 	peers.Fds = Discovery.ConnectToServer(ips)
 	peers.Mux.Unlock()
-	fmt.Println("connection established with all peers")
+	fmt.Println("started storage node")
+	fmt.Println("=============================")
 	query.StartServer()
 }
