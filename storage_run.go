@@ -22,14 +22,14 @@ func main() {
 	var srv server.Server
 	srv.Peers = &peers
 	go srv.StartServer()
-	log.Println("discovering other nodes..")
+	log.Println("DISCOVERING OTHER NODES..")
 	time.Sleep(3*time.Second)
 	ips := Discovery.GetIps("169.254.175.29:8000")
 	peers.Mux.Lock()
 	peers.Fds = Discovery.ConnectToServer(ips)
 	peers.Mux.Unlock()
-	log.Println("connected to peers")
-	log.Println("syncing database..")
+	log.Println("CONNECTED TO PEERS")
+	log.Println("SYNCING DATABASE")
 	time.Sleep(2*time.Second)
 	hashes := sync.RequestHashes(peers.Fds[ips[0][:strings.IndexByte(ips[0],':')]])
 	// log.Println(len(hashes))
@@ -38,8 +38,8 @@ func main() {
 	// 	storage.AddTransaction(node.Tx,node.Signature)
 	// }
 	// log.Println(len(storage.OrphanedTransactions))
-	log.Println("database updated")
+	log.Println("DATABASE UPDATED")
 	time.Sleep(2*time.Second)
-	log.Println("storage node started")
+	log.Println("STORAGE NODE STARTED")
 	query.StartServer()
 }

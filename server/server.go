@@ -1,7 +1,6 @@
 package server
 
 import(
-	"fmt"
 	"net"
 	"time"
 	"encoding/binary"
@@ -12,6 +11,7 @@ import(
 	"encoding/json"
 	"strings"
 	"sync"
+	log "Go-DAG-storageNode/logdump"
 )
 
 type Server struct {
@@ -26,12 +26,10 @@ func (srv *Server) HandleConnection(connection net.Conn,dbLock *sync.Mutex) {
 	if _,ok := srv.Peers.Fds[ip] ; !ok {
 		c,e := net.Dial("tcp",ip+":9000")
 		if e != nil {
-			fmt.Println("Connection Unsuccessful")
+			log.Println("CONNECTION UNSUCCESSFUL")
 		} else {
 			srv.Peers.Fds[ip] = c
-			fmt.Println("=============================\n")
-			fmt.Println("Connection with peer Successful")
-			fmt.Println("=============================\n")
+			log.Println("CONNECTION WITH PEER SUCCESSFUL")
 		}
 	}
 	srv.Peers.Mux.Unlock()
@@ -43,7 +41,7 @@ func (srv *Server) HandleConnection(connection net.Conn,dbLock *sync.Mutex) {
 		// specifies the type of the message
 		if magic_number == 1 { 
 			if headerLen < 8 {
-				fmt.Println("message broken")
+				log.Println("message broken")
 			} else {
 				length := binary.LittleEndian.Uint32(buf1[4:8])
 				buf2 := make([]byte,length+72)
@@ -62,7 +60,7 @@ func (srv *Server) HandleConnection(connection net.Conn,dbLock *sync.Mutex) {
 			srv.Peers.Mux.Lock()
 			delete(srv.Peers.Fds,ip)
 			srv.Peers.Mux.Unlock()
-			fmt.Println(err)
+			//log.Println(err)
 			break
 		}
 		if len(buf) > 0 {
@@ -84,15 +82,13 @@ func (srv *Server)HandleRequests (connection net.Conn,data []byte, IP string, db
 			added := storage.AddTransaction(tx,sign)
 			dbLock.Unlock()
 			if added {
-				fmt.Println("=============================\n")
-				fmt.Println("Recieved tranasction")
+				log.Println("RECIEVED TRANSACTION")
 				time.Sleep(1*time.Second)
-				fmt.Println("Verified transaction Pow and Signature")
+				log.Println("VERIFIED TRANSACTION PoW AND SIGNATURE")
 				time.Sleep(1*time.Second)
-				fmt.Println("Added to database")
+				log.Println("ADDED TO DATABASE")
 				srv.ForwardTransaction(data,IP)
-				fmt.Println("Forwarded to other peers")
-				fmt.Println("=============================\n")
+				log.Println("FORWARDED TO OTHER PEERS")
 			}
 			
 		}
@@ -113,7 +109,7 @@ func (srv *Server)HandleRequests (connection net.Conn,data []byte, IP string, db
 		reply = append(serialize.EncodeToBytes(l),reply...)
 		connection.Write(reply)
 	} else {
-		fmt.Println("Failed Request")
+		log.Println("FAILED REQUEST")
 	}
 }
 
@@ -126,7 +122,7 @@ func ValidTransaction(t dt.Transaction, signature []byte) bool {
 	h := Crypto.Hash(s)
 	sigVerify := Crypto.Verify(signature,PublicKey,h[:])
 	if sigVerify == false {
-		fmt.Println("Invalid signature")
+		log.Println("INVALID SIGNATURE")
 	}
 	return sigVerify && Crypto.VerifyPoW(t,2)
 	//return Crypto.VerifyPoW(t,2)
@@ -135,7 +131,7 @@ func ValidTransaction(t dt.Transaction, signature []byte) bool {
 
 func (srv *Server)ForwardTransaction(t []byte, IP string) {
 	// sending the transaction to the peers excluding the one it came from
-	//fmt.Println("Relayed to other peers")	
+	//log.Println("Relayed to other peers")	
 	srv.Peers.Mux.Lock()
 	for k,conn := range srv.Peers.Fds {
 		if k != IP {

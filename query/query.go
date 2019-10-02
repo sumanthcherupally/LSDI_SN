@@ -38,7 +38,7 @@ func HandleQuery(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	// Log.Println("=============================")
-	Log.Println("recieved query request")
+	Log.Println("RECIEVED QUERY REQUEST")
 
 	db, err := sql.Open("mysql","Sumanth:sumanth@tcp(127.0.0.1:3306)/dag")
 	if err != nil {
@@ -62,7 +62,7 @@ func HandleQuery(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type","application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(ww)
-	Log.Println("served query request for Txid-"+query.Txid)
+	Log.Println("SERVED QUERY REQUEST FOR Txid-"+query.Txid)
 	// Log.Println("=============================")
 }
 
