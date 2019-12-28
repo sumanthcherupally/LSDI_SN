@@ -9,6 +9,7 @@ import(
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 	"log"
+	"Go-DAG-storageNode/sync"
 	badger "github.com/dgraph-io/badger"
 )
 
@@ -17,12 +18,12 @@ var OrphanedTransactions = make(map[string] []dt.Vertex)
 var Mux sync.Mutex 
 
 
-func AddTransaction(tx dt.Transaction, signature []byte, serializedTx []byte) bool {
+func AddTransaction(tx dt.Transaction, signature []byte, serializedTx []byte, Peers *dt.Peers) bool {
 
 	// change this function for the storage Node
 
 	Txid := Crypto.Hash(serialize.SerializeData(tx))
-	h := Crypto.EncodeToHex(Txid[:])
+	// h := Crypto.EncodeToHex(Txid[:])
 
 	if tx.Timestamp == 0 { 						//To add the genesis tx to the db
 		// serializedTx := Crypto.EncodeToHex(serialize.SerializeData(tx))
@@ -46,12 +47,17 @@ func AddTransaction(tx dt.Transaction, signature []byte, serializedTx []byte) bo
 		okR := checkifPresentDb(right)
 		if !okL || !okR {
 			if !okL {
-				OrphanedTransactions[left] = append(OrphanedTransactions[left],Vertex)
-				//fmt.Println("Orphaned Transactions")	
+				// OrphanedTransactions[left] = append(OrphanedTransactions[left],Vertex)
+				//fmt.Println("Orphaned Transactions")
+				sync.QueryOneTransactions(Peers,&okL)
 			}
 			if !okR {
+				sync.QueryOneTransactions(Peers,&okR)
 				//fmt.Println("Orphaned Transactions")
-				OrphanedTransactions[right] = append(OrphanedTransactions[right],Vertex)
+				// OrphanedTransactions[right] = append(OrphanedTransactions[right],Vertex)
+			}
+			if okL && okR {
+				return false
 			}
 		} else {
 			// l := getTx(left)
@@ -72,9 +78,9 @@ func AddTransaction(tx dt.Transaction, signature []byte, serializedTx []byte) bo
 			// //fmt.Println("Added Transaction ",h)
 		}
 	}
-	if duplicationCheck {
-		checkOrphanedTransactions(h, serializedTx)
-	}
+	// if duplicationCheck {
+	// 	checkOrphanedTransactions(h, serializedTx)
+	// }
 	return duplicationCheck
 }
 
@@ -211,7 +217,7 @@ func GetTransaction(Txid []byte]) dt.Transaction {
 // 	// return Resp
 // }
 
-func checkifPresentDb(Txid []byte]) bool{
+func checkifPresentDb(Txid []byte) bool{
 
 	opts := badger.DefaultOptions
 	opts.Dir = ""
@@ -255,19 +261,19 @@ func checkifPresentDb(Txid []byte]) bool{
 	// }
 }
 
-func checkOrphanedTransactions(h string, serializedTx []byte) {
-	Mux.Lock()
-	vertices,ok := OrphanedTransactions[h]
-	Mux.Unlock()
-	if ok {
-		for _,vertex := range vertices {
-			if AddTransaction(vertex.Tx,vertex.Signature,serializedTx) {
-				//fmt.Println("resolved transaction")
-			}
-		}
-		Mux.Lock()
-		delete(OrphanedTransactions,h)
-		Mux.Unlock()
-	}
-	return 
-}
+// func checkOrphanedTransactions(h string, serializedTx []byte) {
+// 	Mux.Lock()
+// 	vertices,ok := OrphanedTransactions[h]
+// 	Mux.Unlock()
+// 	if ok {
+// 		for _,vertex := range vertices {
+// 			if AddTransaction(vertex.Tx,vertex.Signature,serializedTx) {
+// 				//fmt.Println("resolved transaction")
+// 			}
+// 		}
+// 		Mux.Lock()
+// 		delete(OrphanedTransactions,h)
+// 		Mux.Unlock()
+// 	}
+// 	return 
+// }

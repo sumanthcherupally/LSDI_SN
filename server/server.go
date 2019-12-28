@@ -79,7 +79,7 @@ func (srv *Server)HandleRequests (connection net.Conn,data []byte, IP string, db
 			// maybe wasting verifying duplicate transactions, 
 			// instead verify signatures and PoW while tip selection
 			dbLock.Lock()
-			added := storage.AddTransaction(tx,sign,data[4:])
+			added := storage.AddTransaction(tx,sign,data[4:],srv.peers)
 			dbLock.Unlock()
 			if added {
 				// log.Println("RECIEVED TRANSACTION")
@@ -100,14 +100,21 @@ func (srv *Server)HandleRequests (connection net.Conn,data []byte, IP string, db
 		// request to give transactions based on tips
 		hash := data[4:36]
 		str := Crypto.EncodeToHex(hash)
-		tx,sign := storage.GetTransaction([]byte(str))
-		// sign := storage.GetSignature(str)
-		reply := serialize.SerializeData(tx)
-		var l uint32
-		l = uint32(len(reply))
-		reply = append(reply,sign...)
-		reply = append(serialize.EncodeToBytes(l),reply...)
-		connection.Write(reply)
+		if storage.checkifPresentDb(hash) {
+			tx,sign := storage.GetTransaction(hash)
+			// sign := storage.GetSignature(str)
+			reply := serialize.SerializeData(tx)
+			var l uint32
+			l = uint32(len(reply))
+			reply = append(reply,sign...)
+			reply = append(serialize.EncodeToBytes(l),reply...)
+			reply = append(serialize.EncodeToBytes("1"),reply...)
+			connection.Write(reply)
+		} else {
+			reply := serialize.EncodeToBytes("0")
+			connection.Write(reply)
+		}
+
 	} else {
 		log.Println("FAILED REQUEST")
 	}

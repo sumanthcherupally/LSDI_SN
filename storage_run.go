@@ -31,15 +31,15 @@ func main() {
 	log.Println("CONNECTED TO PEERS")
 	log.Println("SYNCING DATABASE")
 	// time.Sleep(2*time.Second)
-	hashes := sync.RequestHashes(peers.Fds[ips[0][:strings.IndexByte(ips[0],':')]])
+	// hashes := sync.RequestHashes(peers.Fds[ips[0][:strings.IndexByte(ips[0],':')]])
 	// log.Println(len(hashes))
-	sync.QueryTransactions(peers.Fds[ips[0][:strings.IndexByte(ips[0],':')]],hashes)
+	// sync.QueryTransactions(peers.Fds[ips[0][:strings.IndexByte(ips[0],':')]],hashes)
 	// for _,node := range storage.OrphanedTransactions {
 	// 	storage.AddTransaction(node.Tx,node.Signature)
 	// }
 	// log.Println(len(storage.OrphanedTransactions))
-	log.Println("DATABASE UPDATED")
+	// log.Println("DATABASE UPDATED")
 	// time.Sleep(2*time.Second)
-	log.Println("STORAGE NODE STARTED")
+	// log.Println("STORAGE NODE STARTED")
 	query.StartServer()
 }
