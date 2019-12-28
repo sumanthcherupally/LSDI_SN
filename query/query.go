@@ -9,6 +9,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"Go-DAG-storageNode/Crypto"
 	Log "Go-DAG-storageNode/logdump"
+	"Go-DAG-storageNode/storage"
 )
 
 type verifyQuery struct{
@@ -47,12 +48,14 @@ func HandleQuery(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 	
 	Resp := verifyQueryResp{}
-	queryStr := `SELECT Transaction FROM storage WHERE Txid = ?` // check err
-	err1 := db.QueryRow(queryStr, query.Txid).Scan(&Resp.tx)
-	if err1 != nil {
-		log.Fatal(err1)
-	}
-	RespToSend := serialize.Deserializedata(Crypto.DecodeToBytes(Resp.tx))
+	// queryStr := `SELECT Transaction FROM storage WHERE Txid = ?` // check err
+
+	// err1 := db.QueryRow(queryStr, query.Txid).Scan(&Resp.tx)
+	// if err1 != nil {
+	// 	log.Fatal(err1)
+	// }
+	tx,sign := storage.GetTransaction([]byte(Resp.Txid))
+	RespToSend := serialize.Deserializedata(tx)
 	qq := send{}
 	qq.Hash = Crypto.EncodeToHex(RespToSend.Hash[:])
 	ww ,err := json.Marshal(qq)

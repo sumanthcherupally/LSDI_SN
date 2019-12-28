@@ -79,16 +79,16 @@ func (srv *Server)HandleRequests (connection net.Conn,data []byte, IP string, db
 			// maybe wasting verifying duplicate transactions, 
 			// instead verify signatures and PoW while tip selection
 			dbLock.Lock()
-			added := storage.AddTransaction(tx,sign)
+			added := storage.AddTransaction(tx,sign,data[4:])
 			dbLock.Unlock()
 			if added {
-				log.Println("RECIEVED TRANSACTION")
-				time.Sleep(1*time.Second)
-				log.Println("VERIFIED TRANSACTION PoW AND SIGNATURE")
-				time.Sleep(1*time.Second)
-				log.Println("ADDED TO DATABASE")
+				// log.Println("RECIEVED TRANSACTION")
+				// time.Sleep(1*time.Second)
+				// log.Println("VERIFIED TRANSACTION PoW AND SIGNATURE")
+				// time.Sleep(1*time.Second)
+				// log.Println("ADDED TO DATABASE")
 				srv.ForwardTransaction(data,IP)
-				log.Println("FORWARDED TO OTHER PEERS")
+				// log.Println("FORWARDED TO OTHER PEERS")
 			}
 			
 		}
@@ -100,8 +100,8 @@ func (srv *Server)HandleRequests (connection net.Conn,data []byte, IP string, db
 		// request to give transactions based on tips
 		hash := data[4:36]
 		str := Crypto.EncodeToHex(hash)
-		tx := storage.GetTransaction(str)
-		sign := storage.GetSignature(str)
+		tx,sign := storage.GetTransaction([]byte(str))
+		// sign := storage.GetSignature(str)
 		reply := serialize.SerializeData(tx)
 		var l uint32
 		l = uint32(len(reply))

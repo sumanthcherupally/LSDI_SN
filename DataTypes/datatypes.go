@@ -12,7 +12,6 @@ type Transaction struct {
 	Timestamp int64
 	Hash [32]byte
 	From [65]byte //length of public key 33(compressed) or 65(uncompressed)
-	Txid [16]byte
 	LeftTip [32]byte
 	RightTip [32]byte
 	Nonce uint32

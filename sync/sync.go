@@ -47,7 +47,8 @@ func QueryTransactions(conn net.Conn, hashes []string) {
 		buf := make([]byte,1024)
 		length,_ := conn.Read(buf)
 		tx,sign := serialize.DeserializeTransaction(buf[:length])
-		storage.AddTransaction(tx,sign)
+		//Verify signature b4 adding to db - NOT DOING
+		storage.AddTransaction(tx,sign,buf[:length])
 	}
 
 	// missingTxs := requestMissingTransacions()

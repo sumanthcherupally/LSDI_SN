@@ -9,6 +9,7 @@ import(
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 	"log"
+	badger "github.com/dgraph-io/badger"
 )
 
 
@@ -16,27 +17,27 @@ var OrphanedTransactions = make(map[string] []dt.Vertex)
 var Mux sync.Mutex 
 
 
-func AddTransaction(tx dt.Transaction, signature []byte) bool {
+func AddTransaction(tx dt.Transaction, signature []byte, serializedTx []byte) bool {
 
 	// change this function for the storage Node
+
+	Txid := Crypto.Hash(serialize.SerializeData(tx))
+	h := Crypto.EncodeToHex(Txid[:])
+
 	if tx.Timestamp == 0 { 						//To add the genesis tx to the db
-		serializedTx := Crypto.EncodeToHex(serialize.SerializeData(tx))
-		Txid := [16]byte(tx.Txid)
-		left := Crypto.EncodeToHex(tx.LeftTip[:])
-		right := Crypto.EncodeToHex(tx.RightTip[:])
-		hash := Crypto.Hash(serialize.SerializeData(tx))
-		h := Crypto.EncodeToHex(hash[:])
-		AddToDb(serializedTx,Txid,h,left,right,signature)
+		// serializedTx := Crypto.EncodeToHex(serialize.SerializeData(tx))
+		// Txid := [16]byte(tx.Txid)
+		// left := Crypto.EncodeToHex(tx.LeftTip[:])
+		// right := Crypto.EncodeToHex(tx.RightTip[:])	
+		// AddToDb(Txid,serializedTx,h,left,right,signature)
+		AddToDb(Txid,serializedTx)
 		return true
 	}
 	var Vertex dt.Vertex
 	var duplicationCheck bool
 	duplicationCheck = false
-	s := serialize.SerializeData(tx)
-	hash := Crypto.Hash(s)
-	h := Crypto.EncodeToHex(hash[:])
 	
-	if !checkifPresentDb(h){  //Duplication check
+	if !checkifPresentDb(Txid){  //Duplication check
 		Vertex.Tx = tx
 		Vertex.Signature = signature
 		left := Crypto.EncodeToHex(tx.LeftTip[:])
@@ -55,9 +56,9 @@ func AddTransaction(tx dt.Transaction, signature []byte) bool {
 		} else {
 			// l := getTx(left)
 			// r := getTx(right)
-			serializedTx := Crypto.EncodeToHex(serialize.SerializeData(tx))
-			Txid := tx.Txid
-			AddToDb(serializedTx,Txid,h,left,right,signature)
+			// serializedTx := Crypto.EncodeToHex(serialize.SerializeData(tx))
+			// Txid := tx.Txid
+			AddToDb(Txid,serializedTx)
 			// if left == right {
 			// 	l.Neighbours = append(l.Neighbours,h)
 			// 	dag.Graph[Crypto.EncodeToHex(tx.LeftTip[:])] = l
@@ -72,115 +73,195 @@ func AddTransaction(tx dt.Transaction, signature []byte) bool {
 		}
 	}
 	if duplicationCheck {
-		checkOrphanedTransactions(h)
+		checkOrphanedTransactions(h, serializedTx)
 	}
 	return duplicationCheck
 }
 
-func AddToDb(serializedTx string, Txid [16]byte, h string,left string,right string,signature []byte) {
-	db, err := sql.Open("mysql","Sumanth:sumanth@tcp(127.0.0.1:3306)/dag")
+func AddToDb(Txid []byte, serializedTx []byte]) {	
+	opts := badger.DefaultOptions
+	opts.Dir = ""
+	opts.ValueDir = ""
+	kv, err := badger.NewKV(&opts)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
-	defer db.Close()
+	defer kv.Close()
+	err = kv.Set(Txid,serializedTx)
+	if err != nil {
+		panic(err)
+	}
 
-	stmt, err := db.Prepare("INSERT INTO storage(Hash_tx,Txid,Transaction,Left_tip,Right_tip,Signature) VALUES(?,?,?,?,?,?)")
-	_, err = stmt.Exec(h,Crypto.EncodeToHex(Txid[:]),serializedTx,left,right,signature)
-	if err != nil {
-	log.Fatal(err)
-	}
+	// db, err := sql.Open("mysql","Sumanth:sumanth@tcp(127.0.0.1:3306)/dag")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// defer db.Close()
+
+	// stmt, err := db.Prepare("INSERT INTO storage(Hash_tx,Txid,Transaction,Left_tip,Right_tip,Signature) VALUES(?,?,?,?,?,?)")
+	// _, err = stmt.Exec(h,Crypto.EncodeToHex(Txid[:]),serializedTx,left,right,signature)
+	// if err != nil {
+	// log.Fatal(err)
+	// }
 }
 
 
 func GetAllHashes() []string {
-	db, err := sql.Open("mysql","Sumanth:sumanth@tcp(127.0.0.1:3306)/dag")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-	stmt, err := db.Prepare("SELECT Hash_tx FROM storage")
-	rows, err := stmt.Query()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
 	Hashes := make([]string,0)
-	for rows.Next() {
-		var u string
-		err := rows.Scan(&u) // check err
-		if err != nil {
-			log.Fatal(err)
+	err := db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.Dir = ""
+		// opts.ValueDir = ""
+		opts.PrefetchSize = false
+		it := txn.NewIterator(opts)
+		defer it.Close()
+		for it.Rewind(); it.Valid(); it.Next() {
+			Hashes = append(Hashes, it.Item().Key())
 		}
-		Hashes = append(Hashes, u)
-	}
-	fmt.Println(len(Hashes))
+		return nil
+	})
+	// fmt.Println(len(Hashes))
 	return Hashes
+
+	// db, err := sql.Open("mysql","Sumanth:sumanth@tcp(127.0.0.1:3306)/dag")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// defer db.Close()
+	// stmt, err := db.Prepare("SELECT Hash_tx FROM storage")
+	// rows, err := stmt.Query()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// defer rows.Close()
+	// Hashes := make([]string,0)
+	// for rows.Next() {
+	// 	var u string
+	// 	err := rows.Scan(&u) // check err
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	Hashes = append(Hashes, u)
+	// }
+	// fmt.Println(len(Hashes))
+	// return Hashes
 }
 
 // GetTransaction returns transaction based on hash value.
-func GetTransaction(hash string) dt.Transaction {
-	db, err := sql.Open("mysql","Sumanth:sumanth@tcp(127.0.0.1:3306)/dag")
+func GetTransaction(Txid []byte]) dt.Transaction {
+	
+	opts := badger.DefaultOptions
+	opts.Dir = ""
+	opts.ValueDir = ""
+	kv, err := badger.NewKV(&opts)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
-	defer db.Close()
-	var Resp string
-	queryStr := "SELECT Transaction FROM storage WHERE Hash_tx = ?" // check err
-	err1 := db.QueryRow(queryStr, hash).Scan(&Resp)
-	if err1 != nil {
-		log.Fatal(err1)
+	defer kv.Close()
+	var item badger.KVItem
+	err = kv.Get(Txid,&item)
+	if err == ErrKeyNotFound {
+		return false
 	}
-	return serialize.Deserializedata(Crypto.DecodeToBytes(Resp))
+	return serialize.Deserializedata(item.Value())
+
+
+	// db, err := sql.Open("mysql","Sumanth:sumanth@tcp(127.0.0.1:3306)/dag")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// defer db.Close()
+	// var Resp string
+	// queryStr := "SELECT Transaction FROM storage WHERE Hash_tx = ?" // check err
+	// err1 := db.QueryRow(queryStr, hash).Scan(&Resp)
+	// if err1 != nil {
+	// 	log.Fatal(err1)
+	// }
+	// return serialize.Deserializedata(Crypto.DecodeToBytes(Resp))
 }
 
 // GetSignature returns signature of tranasction based on hash value.
-func GetSignature(hash string) []byte {
-	db, err := sql.Open("mysql","Sumanth:sumanth@tcp(127.0.0.1:3306)/dag")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-	Resp := make([]byte,0)
-	queryStr := `SELECT Signature FROM storage WHERE Hash_tx = ?` // check err
-	err1 := db.QueryRow(queryStr, hash).Scan(&Resp)
-	if err1 != nil {
-		log.Fatal(err1)
-	}
-	return Resp
-}
+// func GetSignature(hash string) []byte {
+// 	opts := badger.DefaultOptions
+// 	opts.Dir = ""
+// 	opts.ValueDir = ""
+// 	kv, err := badger.NewKV(&opts)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	defer kv.Close()
+// 	var item badger.KVItem
+// 	err = kv.Get([]byte(h),&item)
+// 	if err == ErrKeyNotFound {
+// 		return false
+// 	}
 
-func checkifPresentDb(h string) bool{
-	db, err := sql.Open("mysql","Sumanth:sumanth@tcp(127.0.0.1:3306)/dag")
+
+// 	// db, err := sql.Open("mysql","Sumanth:sumanth@tcp(127.0.0.1:3306)/dag")
+// 	// if err != nil {
+// 	// 	log.Fatal(err)
+// 	// }
+// 	// defer db.Close()
+// 	// Resp := make([]byte,0)
+// 	// queryStr := `SELECT Signature FROM storage WHERE Hash_tx = ?` // check err
+// 	// err1 := db.QueryRow(queryStr, hash).Scan(&Resp)
+// 	// if err1 != nil {
+// 	// 	log.Fatal(err1)
+// 	// }
+// 	// return Resp
+// }
+
+func checkifPresentDb(Txid []byte]) bool{
+
+	opts := badger.DefaultOptions
+	opts.Dir = ""
+	opts.ValueDir = ""
+	kv, err := badger.NewKV(&opts)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
-	defer db.Close()
-	stmt, err := db.Prepare("SELECT EXISTS(SELECT 1 FROM storage WHERE Hash_tx = ?)")
-	res, err := stmt.Query(h)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer res.Close()
-	var present int
-	res.Next()
-	err1 := res.Scan(&present)
-	if err1 != nil {
-		log.Fatal(err1)
-	}
-	if(present==1){
-		return true
-	} else{
+	defer kv.Close()
+	var item badger.KVItem
+	err = kv.Get(Txid,&item)
+	if err == ErrKeyNotFound {
 		return false
+	} else if err != nil {
+		panic(err)
+	} else {
+		return true
 	}
+
+	// db, err := sql.Open("mysql","Sumanth:sumanth@tcp(127.0.0.1:3306)/dag")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// defer db.Close()
+	// stmt, err := db.Prepare("SELECT EXISTS(SELECT 1 FROM storage WHERE Hash_tx = ?)")
+	// res, err := stmt.Query(h)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// defer res.Close()
+	// var present int
+	// res.Next()
+	// err1 := res.Scan(&present)
+	// if err1 != nil {
+	// 	log.Fatal(err1)
+	// }
+	// if(present==1){
+	// 	return true
+	// } else{
+	// 	return false
+	// }
 }
 
-func checkOrphanedTransactions(h string) {
+func checkOrphanedTransactions(h string, serializedTx []byte) {
 	Mux.Lock()
 	vertices,ok := OrphanedTransactions[h]
 	Mux.Unlock()
 	if ok {
 		for _,vertex := range vertices {
-			if AddTransaction(vertex.Tx,vertex.Signature) {
+			if AddTransaction(vertex.Tx,vertex.Signature,serializedTx) {
 				//fmt.Println("resolved transaction")
 			}
 		}

@@ -10,6 +10,7 @@ import (
 	"net"
 	"time"
 	"math/rand"
+	"Go-DAG-storageNode/Crypto"
 )
 
 func main() {
@@ -18,7 +19,7 @@ func main() {
 	var genesis dt.Transaction
 	var signatur []byte
 	copy(genesis.Txid[:],[]byte("1234567812345678"))
-	storage.AddTransaction(genesis,signatur)
+	storage.AddTransaction(genesis,signatur,Crypto.EncodeToHex(serialize.SerializeData(genesis)))
 	peers.Fds = make(map[string] net.Conn)
 	var srv server.Server
 	srv.Peers = &peers
