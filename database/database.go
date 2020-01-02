@@ -22,7 +22,7 @@ func AddToDb(key []byte, value []byte]) {
 
 
 func GetAllKeys() []string {
-	Hashes := make([]string,0)
+	Keys := make([]string,0)
 	err := db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.Dir = ""
@@ -31,12 +31,12 @@ func GetAllKeys() []string {
 		it := txn.NewIterator(opts)
 		defer it.Close()
 		for it.Rewind(); it.Valid(); it.Next() {
-			Hashes = append(Hashes, it.Item().Key())
+			Keys = append(Keys, it.Item().Key())
 		}
 		return nil
 	})
-	// fmt.Println(len(Hashes))
-	return Hashes
+	// fmt.Println(len(Keys))
+	return Keys
 
 	// db, err := sql.Open("mysql","Sumanth:sumanth@tcp(127.0.0.1:3306)/dag")
 	// if err != nil {
@@ -63,7 +63,7 @@ func GetAllKeys() []string {
 }
 
 // GetTransaction returns transaction based on hash value.
-func GetTransaction(Txid []byte]) dt.Transaction {
+func GetValue(key []byte) []byte {
 	
 	opts := badger.DefaultOptions
 	opts.Dir = ""
@@ -74,11 +74,12 @@ func GetTransaction(Txid []byte]) dt.Transaction {
 	}
 	defer kv.Close()
 	var item badger.KVItem
-	err = kv.Get(Txid,&item)
+	err = kv.Get(key,&item)
 	if err == ErrKeyNotFound {
 		return false
 	}
-	return serialize.Deserializedata(item.Value())
+	return item.Value()
+	//return serialize.Deserializedata(item.Value())
 
 
 	// db, err := sql.Open("mysql","Sumanth:sumanth@tcp(127.0.0.1:3306)/dag")
@@ -126,8 +127,8 @@ func GetTransaction(Txid []byte]) dt.Transaction {
 // 	// return Resp
 // }
 
-func checkifPresentDb(Txid []byte) bool{
-
+//CheckKey checks if a key-value pair is present in the database, returns true if present else false
+func CheckKey(key []byte) bool{
 	opts := badger.DefaultOptions
 	opts.Dir = ""
 	opts.ValueDir = ""
@@ -137,7 +138,7 @@ func checkifPresentDb(Txid []byte) bool{
 	}
 	defer kv.Close()
 	var item badger.KVItem
-	err = kv.Get(Txid,&item)
+	err = kv.Get(key,&item)
 	if err == ErrKeyNotFound {
 		return false
 	} else if err != nil {
