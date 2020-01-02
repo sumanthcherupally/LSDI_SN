@@ -3,7 +3,7 @@ package sync
 import (
 	"net"
 	"Go-DAG-storageNode/serialize"
-	"Go-DAG-storageNode/storage"
+	// "Go-DAG-storageNode/storage"
 	"encoding/json"
 	"encoding/hex"
 	"fmt"
@@ -65,34 +65,34 @@ func QueryTransactions(conn net.Conn, hashes []string) {
 	// }
 }
 
-func QueryOneTransactions(Peers *dt.Peers, hash string, valid &bool) bool {
-	var magicNumber uint32
-	magicNumber = 3
-	bytes := serialize.EncodeToBytes(magicNumber)
-	b,_ := hex.DecodeString(hash)
-	b = append(bytes,b...)
-	rand.Seed(time.Now().UnixNano())
-    p := rand.Perm(len(Peers.Fds))
-    valid = false
-    for _, r := range p {
-    	Peers.Mux.Lock()
-    	Peers.Fds[r].Write(b)
-    	bufCheck := make([]byte,1)
-		l,_ := Peers.Fds[r].Read(bufCheck)
-		if Crypto.EncodeToHex(bufCheck) == "1" {
-	    	buf := make([]byte,1024)
-			length,_ := Peers.Fds[r].Read(buf)
-			Peers.Mux.Unlock()
-			tx,sign := serialize.DeserializeTransaction(buf[:length])
-			storage.AddTransaction(tx,sign,buf[:length])
-			valid = true
-			break
-		}
-		Peers.Mux.Unlock()
-    }
-	//Verify signature b4 adding to db - NOT DOING
+// func QueryOneTransactions(Peers *dt.Peers, hash string, valid &bool) bool {
+// 	var magicNumber uint32
+// 	magicNumber = 3
+// 	bytes := serialize.EncodeToBytes(magicNumber)
+// 	b,_ := hex.DecodeString(hash)
+// 	b = append(bytes,b...)
+// 	rand.Seed(time.Now().UnixNano())
+//     p := rand.Perm(len(Peers.Fds))
+//     valid = false
+//     for _, r := range p {
+//     	Peers.Mux.Lock()
+//     	Peers.Fds[r].Write(b)
+//     	bufCheck := make([]byte,1)
+// 		l,_ := Peers.Fds[r].Read(bufCheck)
+// 		if Crypto.EncodeToHex(bufCheck) == "1" {
+// 	    	buf := make([]byte,1024)
+// 			length,_ := Peers.Fds[r].Read(buf)
+// 			Peers.Mux.Unlock()
+// 			tx,sign := serialize.DeserializeTransaction(buf[:length])
+// 			storage.AddTransaction(tx,sign,buf[:length])
+// 			valid = true
+// 			break
+// 		}
+// 		Peers.Mux.Unlock()
+//     }
+// 	//Verify signature b4 adding to db - NOT DOING
 	
-}
+// }
 /*
 func requestMissingTransacions() ([]string){
 

@@ -1,25 +1,26 @@
 package storage
 
 import(
-	"fmt"
-	dt "Go-DAG-storageNode/datatypes"
-	"Go-DAG-storageNode/sync"
+	// "fmt"
+	dt "Go-DAG-storageNode/DataTypes"
+	// "Go-DAG-storageNode/sync"
 	"Go-DAG-storageNode/serialize"
 	db "Go-DAG-storageNode/database"
-	"net"
+	// "net"
+	"time"
+	"math/rand"
+	"crypto/sha256"
 	"sync"
 )
 
-var OrphanedTransactions = make(map[string] []Vertex)
+var OrphanedTransactions = make(map[string] [] dt.Vertex)
 var Mux sync.Mutex
 
 //Hash returns the SHA256 hash value
-func Hash(b []byte) [32]byte {
+func Hash(b []byte) []byte {
 	h := sha256.Sum256(b)
-	return h
+	return []byte(h[:])
 }
-
-
 
 func AddTransaction(tx dt.Transaction, signature []byte, serializedTx []byte, Peers *dt.Peers) bool {
 
@@ -36,21 +37,21 @@ func AddTransaction(tx dt.Transaction, signature []byte, serializedTx []byte, Pe
 	var duplicationCheck bool
 	duplicationCheck = false
 	
-	if !db.checkifPresentDb(Txid){  //Duplication check
+	if !db.CheckKey(Txid){  //Duplication check
 		Vertex.Tx = tx
 		Vertex.Signature = signature
-		left := serialize.EncodeToHex(tx.LeftTip[:])
-		right := serialize.EncodeToHex(tx.RightTip[:]) 
-		okL := db.checkifPresentDb(left)
-		okR := db.checkifPresentDb(right)
+		left := tx.LeftTip[:]
+		right := tx.RightTip[:]
+		okL := db.CheckKey(left)
+		okR := db.CheckKey(right)
 		if !okL || !okR {
 			if !okL {
 				// OrphanedTransactions[left] = append(OrphanedTransactions[left],Vertex)
 				//fmt.Println("Orphaned Transactions")
-				sync.QueryOneTransactions(Peers,&okL)
+				QueryOneTransactions(Peers,Txid,&okL)
 			}
 			if !okR {
-				sync.QueryOneTransactions(Peers,&okR)
+				QueryOneTransactions(Peers,Txid,&okR)
 				//fmt.Println("Orphaned Transactions")
 				// OrphanedTransactions[right] = append(OrphanedTransactions[right],Vertex)
 			}
@@ -83,7 +84,7 @@ func AddTransaction(tx dt.Transaction, signature []byte, serializedTx []byte, Pe
 }
 
 //GetTransactiondb Wrapper function for GetTransaction in db module
-func GetTransactiondb(Txid []byte) dt.Transaction,[]byte {
+func GetTransactiondb(Txid []byte) (dt.Transaction,[]byte) {
 	stream := db.GetValue(Txid)
 	return serialize.DeserializeTransaction(stream)
 }
@@ -94,6 +95,42 @@ func checkifPresentDb(Txid []byte) bool {
 }
 
 //GetAllHashes Wrapper function for GetAllKeys in db module
-func GetAllHashes() []string{
+func GetAllHashes() [][]byte{
 	return db.GetAllKeys()
+}
+
+func QueryOneTransactions(Peers *dt.Peers, hash []byte, valid *bool) {
+	var magicNumber uint32
+	magicNumber = 3
+	bytes := serialize.EncodeToBytes(magicNumber)
+	// b,_ := hex.DecodeString(hash)
+	b := append(bytes,hash...)
+	rand.Seed(time.Now().UnixNano())
+    p := rand.Perm(len(Peers.Fds))
+    var keys []string
+    for k := range Peers.Fds {
+    	keys = append(keys, k)
+	}
+    *valid = false
+    for _, r := range p {
+    	Peers.Mux.Lock()
+    	Peers.Fds[keys[r]].Write(b)
+    	bufCheck := make([]byte,1)
+		_,err := Peers.Fds[keys[r]].Read(bufCheck)
+		if serialize.EncodeToHex(bufCheck) == "1" {
+	    	buf := make([]byte,1024)
+			length,_ := Peers.Fds[keys[r]].Read(buf)
+			Peers.Mux.Unlock()
+			tx,sign := serialize.DeserializeTransaction(buf[:length])
+			AddTransaction(tx,sign,buf[:length],Peers)
+			*valid = true
+			break
+		}
+		if err != nil {
+			panic(err)
+		}
+		Peers.Mux.Unlock()
+    }
+	//Verify signature b4 adding to db - NOT DOING
+	
 }

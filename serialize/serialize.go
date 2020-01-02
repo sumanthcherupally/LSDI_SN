@@ -3,11 +3,12 @@ package serialize
 import (
 	"reflect"
 	"bytes"
-	"math/big"
-	"encoding/asn1"
+	// "math/big"
+	"encoding/hex"
+	// "encoding/asn1"
 	"encoding/binary"
 	//"encoding/json"
-	"GO-DAG/storage"
+	dt "Go-DAG-storageNode/DataTypes"
 	"fmt"
 )
 
@@ -23,7 +24,7 @@ func DecodeToBytes(data string) []byte {
 }
 
 //SerializeData serializes transaction to byte slice
-func SerializeData(t storage.Transaction) []byte {
+func SerializeData(t dt.Transaction) []byte {
 	// iterating over a struct is painful in golang
 	var b []byte
 	v := reflect.ValueOf(&t).Elem()
@@ -49,13 +50,13 @@ func EncodeToBytes(x interface{}) []byte {
 }
 
 //DeserializeTransaction Converts back byte slice to transaction
-func DeserializeTransaction(b []byte) (storage.Transaction,[]byte) {
+func DeserializeTransaction(b []byte) (dt.Transaction,[]byte) {
 	// only a temporary method will change to include signature and other checks
 	l := binary.LittleEndian.Uint32(b[:4])
 	payload := b[4:l+4]
 	signature := b[l+4:]
 	r := bytes.NewReader(payload)
-	var tx storage.Transaction
+	var tx dt.Transaction
 	err := binary.Read(r,binary.LittleEndian,&tx)
 	if err != nil { 
 		fmt.Println(err)
@@ -63,16 +64,3 @@ func DeserializeTransaction(b []byte) (storage.Transaction,[]byte) {
 	return tx,signature
 }
 
-//canonicalizeInt Converts bigint to byte slice
-func canonicalizeInt(val *big.Int) []byte {
-	b := val.Bytes()
-	if len(b) == 0 {
-		b = []byte{0x00}
-	}
-	if b[0]&0x80 != 0 {
-		paddedBytes := make([]byte, len(b)+1)
-		copy(paddedBytes[1:], b)
-		b = paddedBytes
-	}
-	return b
-}
