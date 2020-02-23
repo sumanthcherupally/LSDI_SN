@@ -14,6 +14,7 @@ const (
 // Msg is the structure of all the msgs in the p2p network
 type Msg struct {
 	Sender     PeerID
+	ShardID    uint32
 	ID         uint32
 	LenPayload uint32
 	Payload    []byte

@@ -1,13 +1,13 @@
 package main
 
 import (
-	"DAG-SN/Crypto"
-	dt "DAG-SN/DataTypes"
-	"DAG-SN/database"
-	"DAG-SN/node"
-	"DAG-SN/p2p"
-	"DAG-SN/query"
-	"DAG-SN/storage"
+	"Go-DAG-storageNode/Crypto"
+	dt "Go-DAG-storageNode/DataTypes"
+	"Go-DAG-storageNode/database"
+	"Go-DAG-storageNode/node"
+	"Go-DAG-storageNode/p2p"
+	"Go-DAG-storageNode/query"
+	"Go-DAG-storageNode/storage"
 	"os"
 )
 
@@ -23,10 +23,11 @@ func main() {
 	ID.PublicKey = Crypto.SerializePublicKey(&PrivateKey.PublicKey)
 	v := constructGenisis()
 	storage.AddTransaction(v.Tx, v.Signature)
+	var ch chan p2p.Msg
 	if os.Args[1] == "b" {
-		node.NewBootstrap(ID)
+		ch = node.NewBootstrap(ID)
 	} else if os.Args[1] == "n" {
-		node.New(ID)
+		ch = node.New(ID)
 	}
 	query.StartServer()
 }

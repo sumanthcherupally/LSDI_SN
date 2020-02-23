@@ -1,9 +1,9 @@
 package storage
 
 import (
-	dt "DAG-SN/DataTypes"
-	db "DAG-SN/database"
-	"DAG-SN/serialize"
+	dt "Go-DAG-storageNode/DataTypes"
+	db "Go-DAG-storageNode/database"
+	"Go-DAG-storageNode/serialize"
 	"crypto/sha256"
 	"log"
 	"sync"

@@ -26,6 +26,7 @@ const (
 type PeerID struct {
 	IP        []byte
 	PublicKey []byte
+	ShardID   uint32
 }
 
 // Equals compares PeerIDs

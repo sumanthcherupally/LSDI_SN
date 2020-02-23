@@ -1,6 +1,9 @@
 package p2p
 
 import (
+	dt "Go-DAG-storageNode/DataTypes"
+	"Go-DAG-storageNode/serialize"
+	sh "Go-DAG-storageNode/sharding"
 	"bytes"
 	"errors"
 	"log"
@@ -8,6 +11,10 @@ import (
 	"strconv"
 	"sync"
 	"time"
+)
+
+var (
+	haltServer sync.Mutex
 )
 
 type handshakeMsg struct {
@@ -28,14 +35,16 @@ func validateHandshakeMsg(reply []byte) (PeerID, error) {
 
 // Server ...
 type Server struct {
-	peers        []Peer
-	maxPeers     uint32
-	HostID       PeerID
-	ec           chan error
-	mux          sync.Mutex
-	NewPeer      chan Peer
-	BroadcastMsg chan Msg
-	RemovePeer   chan Peer
+	peers             []Peer
+	maxPeers          uint32
+	HostID            PeerID
+	ec                chan error
+	mux               sync.Mutex
+	NewPeer           chan Peer
+	BroadcastMsg      chan Msg
+	RemovePeer        chan Peer
+	ShardingSignal    chan dt.ShardSignal
+	ShardTransactions chan dt.ShardTransaction
 	// ...
 }
 
@@ -199,7 +208,28 @@ func (srv *Server) Run() {
 		}
 	}
 
+	// var tempPeers []PeerID
+	go func() {
+		for {
+			signal := <-srv.ShardingSignal
+			haltServer.Lock()
+			var sign []byte
+			Shardingtx, err := sh.MakeShardingtx(srv.HostID.PublicKey, signal, sign)
+			srv.HostID.ShardID = Shardingtx.ShardNo
+			if err != nil {
+				log.Println(err)
+			}
+			// Send shard transactions to peers dont accept shard transactions, only direct connections
+			var msg Msg
+			msg.ID = 36
+			msg.Payload = serialize.Encode(Shardingtx)
+			msg.LenPayload = uint32(len(msg.Payload))
+			Send(msg, srv.peers)
+		}
+	}()
+
 	for {
+		haltServer.Lock()
 		select {
 		// listen
 		case msg := <-srv.BroadcastMsg:
@@ -208,7 +238,22 @@ func (srv *Server) Run() {
 			log.Fatal("error")
 		case p := <-srv.RemovePeer:
 			srv.removePeer(p)
+		case tx := <-srv.ShardTransactions:
+			var p PeerID
+			copy(tx.IP[:], p.IP)
+			copy(tx.From[:], p.PublicKey)
+			p.ShardID = tx.ShardNo
+			dup := false
+			for _, peer := range tempPeers {
+				if peer.Equals(p) {
+					dup = true
+				}
+			}
+			if !dup {
+				tempPeers = append(tempPeers, p)
+			}
 		}
+		haltServer.Unlock()
 	}
 }
 
@@ -216,7 +261,7 @@ func (srv *Server) Run() {
 func Send(msg Msg, peers []Peer) {
 	for _, p := range peers {
 		var err error
-		if !p.ID.Equals(msg.Sender) {
+		if !p.ID.Equals(msg.Sender) && msg.ShardID == p.ID.ShardID {
 			err = SendMsg(p.rw, msg)
 		}
 		if err != nil {
