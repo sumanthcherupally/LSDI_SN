@@ -65,7 +65,7 @@ func AddTransaction(tx dt.Transaction, signature []byte) int {
 //GetTransactiondb Wrapper function for GetTransaction in db module
 func GetTransactiondb(Txid []byte) (dt.Transaction, []byte) {
 	stream := db.GetValue(Txid)
-	return serialize.DeserializeTransaction(stream, uint32(len(stream)))
+	return serialize.Decode32(stream, uint32(len(stream)))
 }
 
 // CheckifPresentDb Wrapper function for CheckKey in db module

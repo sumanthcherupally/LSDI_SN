@@ -225,6 +225,7 @@ func (srv *Server) Run() {
 			msg.Payload = serialize.Encode(Shardingtx)
 			msg.LenPayload = uint32(len(msg.Payload))
 			Send(msg, srv.peers)
+			haltServer.Unlock()
 		}
 	}()
 
@@ -238,20 +239,6 @@ func (srv *Server) Run() {
 			log.Fatal("error")
 		case p := <-srv.RemovePeer:
 			srv.removePeer(p)
-		case tx := <-srv.ShardTransactions:
-			var p PeerID
-			copy(tx.IP[:], p.IP)
-			copy(tx.From[:], p.PublicKey)
-			p.ShardID = tx.ShardNo
-			dup := false
-			for _, peer := range tempPeers {
-				if peer.Equals(p) {
-					dup = true
-				}
-			}
-			if !dup {
-				tempPeers = append(tempPeers, p)
-			}
 		}
 		haltServer.Unlock()
 	}

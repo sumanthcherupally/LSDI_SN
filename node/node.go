@@ -10,7 +10,7 @@ import (
 )
 
 // New ...
-func New(hostID *p2p.PeerID) chan p2p.Msg {
+func New(hostID *p2p.PeerID) {
 
 	var srv p2p.Server
 	srv.HostID.PublicKey = hostID.PublicKey
@@ -19,43 +19,21 @@ func New(hostID *p2p.PeerID) chan p2p.Msg {
 	srv.BroadcastMsg = make(chan p2p.Msg)
 	srv.NewPeer = make(chan p2p.Peer)
 	srv.RemovePeer = make(chan p2p.Peer)
-	srv.ShardTransactions = make(chan dt.ShardTransaction)
 	srv.ShardingSignal = make(chan dt.ShardSignal)
 	go srv.Run()
 
 	go func() {
 		for {
 			p := <-srv.NewPeer
-			go handle(&p, srv.BroadcastMsg, srv.ShardingSignal, srv.ShardTransactions, srv.RemovePeer)
+			go handle(&p, srv.BroadcastMsg, srv.ShardingSignal, srv.RemovePeer)
 			// go handle(p, srv.BroadcastMsg, srv.RemovePeer)
 		}
 	}()
 	// sync.Sync(srv.GetRandomPeer())
-	return srv.BroadcastMsg
+	return
 }
 
-// NewBootstrap ...
-func NewBootstrap(hostID *p2p.PeerID) chan p2p.Msg {
-	log.Println("BOOTSTRAP NODE")
-	var srv p2p.Server
-	srv.HostID.PublicKey = hostID.PublicKey
-	hostID = &srv.HostID
-	srv.BroadcastMsg = make(chan p2p.Msg)
-	srv.NewPeer = make(chan p2p.Peer)
-	srv.RemovePeer = make(chan p2p.Peer)
-	srv.ShardTransactions = make(chan dt.ShardTransaction)
-	srv.ShardingSignal = make(chan dt.ShardSignal)
-	go srv.Run()
-	go func() {
-		for {
-			p := <-srv.NewPeer
-			go handle(&p, srv.BroadcastMsg, srv.ShardingSignal, srv.ShardTransactions, srv.RemovePeer)
-		}
-	}()
-	return srv.BroadcastMsg
-}
-
-func handleMsg(msg p2p.Msg, send chan p2p.Msg, p *p2p.Peer, ShardSignalch chan dt.ShardSignal, Shardtxch chan dt.ShardTransaction) {
+func handleMsg(msg p2p.Msg, send chan p2p.Msg, p *p2p.Peer, ShardSignalch chan dt.ShardSignal) {
 	// check for transactions or request for transactions
 	if msg.ID == 32 {
 		// transaction
@@ -98,26 +76,19 @@ func handleMsg(msg p2p.Msg, send chan p2p.Msg, p *p2p.Peer, ShardSignalch chan d
 		default:
 			log.Println("Duplicate sharding signal")
 		}
-	} else if msg.ID == 36 { //Sharding tx from other nodes
-		tx, sign := serialize.Decode36(msg.Payload, msg.LenPayload)
-		if sh.VerifyShardTransaction(tx, sign, 4) {
-			Shardtxch <- tx
-			log.Println("Recieved sharding tx from", msg.Sender)
-			send <- msg
-		}
 	}
 }
 
 // read the messages and handle
-func handle(p *p2p.Peer, send chan p2p.Msg, ShardSignalch chan dt.ShardSignal, Shardtxch chan dt.ShardTransaction, errChan chan p2p.Peer) {
+func handle(p *p2p.Peer, send chan p2p.Msg, ShardSignalch chan dt.ShardSignal, errChan chan p2p.Peer) {
 	for {
 		msg, err := p.GetMsg()
 		if err != nil {
-			errChan <- p
+			errChan <- *p
 			log.Println(err)
 			break
 		}
-		go handleMsg(msg, send, p)
+		go handleMsg(msg, send, p, ShardSignalch)
 	}
 }
 

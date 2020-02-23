@@ -8,7 +8,6 @@ import (
 	"Go-DAG-storageNode/p2p"
 	"Go-DAG-storageNode/query"
 	"Go-DAG-storageNode/storage"
-	"os"
 )
 
 func main() {
@@ -23,12 +22,7 @@ func main() {
 	ID.PublicKey = Crypto.SerializePublicKey(&PrivateKey.PublicKey)
 	v := constructGenisis()
 	storage.AddTransaction(v.Tx, v.Signature)
-	var ch chan p2p.Msg
-	if os.Args[1] == "b" {
-		ch = node.NewBootstrap(ID)
-	} else if os.Args[1] == "n" {
-		ch = node.New(ID)
-	}
+	node.New(&ID)
 	query.StartServer()
 }
 
