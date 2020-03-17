@@ -24,10 +24,25 @@ func DecodeToBytes(data string) []byte {
 func Encode(t interface{}) []byte {
 	// iterating over a struct is painful in golang
 	var b []byte
-	v := reflect.ValueOf(&t).Elem()
-	for i := 0; i < v.NumField(); i++ {
-		value := v.Field(i)
-		b = append(b, EncodeToBytes(value.Interface())...)
+	switch tx := t.(type) {
+	case dt.Transaction:
+		v := reflect.ValueOf(&tx).Elem()
+		for i := 0; i < v.NumField(); i++ {
+			value := v.Field(i)
+			b = append(b, EncodeToBytes(value.Interface())...)
+		}
+	case dt.ShardTransaction:
+		v := reflect.ValueOf(&tx).Elem()
+		for i := 0; i < v.NumField(); i++ {
+			value := v.Field(i)
+			b = append(b, EncodeToBytes(value.Interface())...)
+		}
+	case dt.ShardSignal:
+		v := reflect.ValueOf(&tx).Elem()
+		for i := 0; i < v.NumField(); i++ {
+			value := v.Field(i)
+			b = append(b, EncodeToBytes(value.Interface())...)
+		}
 	}
 	return b
 }

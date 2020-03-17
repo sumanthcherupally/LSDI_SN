@@ -71,6 +71,7 @@ func (p *Peer) readLoop(readErr chan error) {
 	for {
 		msg, err := ReadMsg(p.rw)
 		msg.Sender = p.ID
+		msg.ShardID = p.ID.ShardID
 		if err != nil {
 			select {
 			case readErr <- err:

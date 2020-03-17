@@ -1,7 +1,6 @@
 package node
 
 import (
-	"Go-DAG-storageNode/Crypto"
 	dt "Go-DAG-storageNode/DataTypes"
 	"Go-DAG-storageNode/p2p"
 	"Go-DAG-storageNode/serialize"
@@ -15,7 +14,6 @@ func New(hostID *p2p.PeerID) {
 	var srv p2p.Server
 	srv.HostID.PublicKey = hostID.PublicKey
 	hostID = &srv.HostID
-	// srv.HostID = hostID
 	srv.BroadcastMsg = make(chan p2p.Msg)
 	srv.NewPeer = make(chan p2p.Peer)
 	srv.RemovePeer = make(chan p2p.Peer)
@@ -26,10 +24,8 @@ func New(hostID *p2p.PeerID) {
 		for {
 			p := <-srv.NewPeer
 			go handle(&p, srv.BroadcastMsg, srv.ShardingSignal, srv.RemovePeer)
-			// go handle(p, srv.BroadcastMsg, srv.RemovePeer)
 		}
 	}()
-	// sync.Sync(srv.GetRandomPeer())
 	return
 }
 
@@ -38,7 +34,6 @@ func handleMsg(msg p2p.Msg, send chan p2p.Msg, p *p2p.Peer, ShardSignalch chan d
 	if msg.ID == 32 {
 		// transaction
 		tx, sign := serialize.Decode32(msg.Payload, msg.LenPayload)
-		log.Println(Crypto.EncodeToHex(tx.Hash[:]))
 		if validTransaction(tx, sign) {
 			tr := storage.AddTransaction(tx, sign)
 			if tr == 1 {
@@ -61,7 +56,7 @@ func handleMsg(msg p2p.Msg, send chan p2p.Msg, p *p2p.Peer, ShardSignalch chan d
 	} else if msg.ID == 34 {
 		hash := msg.Payload
 		var replyMsg p2p.Msg
-		replyMsg.ID = 32
+		replyMsg.ID = 33
 		if storage.CheckifPresentDb(hash) {
 			tx, sign := storage.GetTransactiondb(hash)
 			replyMsg.Payload = append(serialize.Encode(tx), sign...)
@@ -74,7 +69,26 @@ func handleMsg(msg p2p.Msg, send chan p2p.Msg, p *p2p.Peer, ShardSignalch chan d
 		case ShardSignalch <- signal:
 			send <- msg
 		default:
-			log.Println("Duplicate sharding signal")
+		}
+	} else if msg.ID == 33 {
+		// reply to a request sync transaction
+		tx, sign := serialize.Decode32(msg.Payload, msg.LenPayload)
+		if validTransaction(tx, sign) {
+			tr := storage.AddTransaction(tx, sign)
+			if tr == 2 {
+				var msg p2p.Msg
+				msg.ID = 34
+				if !storage.CheckifPresentDb(tx.LeftTip[:]) {
+					msg.Payload = tx.LeftTip[:]
+					msg.LenPayload = uint32(len(msg.Payload))
+					p.Send(msg)
+				}
+				if !storage.CheckifPresentDb(tx.RightTip[:]) {
+					msg.Payload = tx.RightTip[:]
+					msg.LenPayload = uint32(len(msg.Payload))
+					p.Send(msg)
+				}
+			}
 		}
 	}
 }
