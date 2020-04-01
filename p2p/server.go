@@ -70,9 +70,10 @@ func (srv *Server) GetRandomPeer() Peer {
 	return p
 }
 
-func (srv *Server) findPeer(peer PeerID) bool {
+func (srv *Server) findPeer(peer PeerID, s uint32) bool {
 	for _, p := range srv.peers {
 		if p.ID.Equals(peer) {
+			p.ID.ShardID = s
 			return true
 		}
 	}
@@ -110,6 +111,7 @@ func (srv *Server) setupConn(conn net.Conn) error {
 	p := newPeer(conn, pid)
 	srv.AddPeer(p)
 	srv.NewPeer <- *p
+	log.Println("New connection from", parseAddr(p.ID.IP))
 	return nil
 }
 
@@ -225,11 +227,12 @@ func (srv *Server) Run() {
 
 	var tempPeers []PeerID
 	var currShardIds []uint32
+	var dup bool
 
 	go func() {
 		for {
 			_ = <-srv.ShardingSignal
-			time.Sleep(10 * time.Second)
+			time.Sleep(50 * time.Second)
 			// check for diversity of shardIDs in existing peers
 			// connect with necessary peers
 
@@ -278,18 +281,21 @@ func (srv *Server) Run() {
 			srv.removePeer(p)
 		case tx := <-srv.ShardTransactions:
 			var p PeerID
+			p.IP = make([]byte, 4)
+			p.PublicKey = make([]byte, 65)
 			copy(p.IP, tx.IP[:])
 			copy(p.PublicKey, tx.From[:])
-			dup := false
+			dup = false
 			for _, peer := range tempPeers {
 				if peer.Equals(p) {
 					dup = true
 				}
 			}
 			if !dup {
-				if srv.findPeer(p) {
+				log.Println("shard transaction recieved", tx.ShardNo)
+				if srv.findPeer(p, tx.ShardNo) {
+					tempPeers = append(tempPeers, p)
 					currShardIds = append(currShardIds, tx.ShardNo)
-					p.ShardID = tx.ShardNo
 				} else {
 					tempPeers = append(tempPeers, p)
 				}

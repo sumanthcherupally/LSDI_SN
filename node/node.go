@@ -18,18 +18,19 @@ func New(hostID *p2p.PeerID) {
 	srv.NewPeer = make(chan p2p.Peer)
 	srv.RemovePeer = make(chan p2p.Peer)
 	srv.ShardingSignal = make(chan dt.ShardSignal)
+	srv.ShardTransactions = make(chan dt.ShardTransaction)
 	go srv.Run()
 
 	go func() {
 		for {
 			p := <-srv.NewPeer
-			go handle(&p, srv.BroadcastMsg, srv.ShardingSignal, srv.RemovePeer)
+			go handle(&p, srv.BroadcastMsg, srv.ShardingSignal, srv.ShardTransactions, srv.RemovePeer)
 		}
 	}()
 	return
 }
 
-func handleMsg(msg p2p.Msg, send chan p2p.Msg, p *p2p.Peer, ShardSignalch chan dt.ShardSignal) {
+func handleMsg(msg p2p.Msg, send chan p2p.Msg, p *p2p.Peer, ShardSignalch chan dt.ShardSignal, Shardtxch chan dt.ShardTransaction) {
 	// check for transactions or request for transactions
 	if msg.ID == 32 {
 		// transaction
@@ -90,11 +91,17 @@ func handleMsg(msg p2p.Msg, send chan p2p.Msg, p *p2p.Peer, ShardSignalch chan d
 				}
 			}
 		}
+	} else if msg.ID == 36 {
+		tx, _ := serialize.Decode36(msg.Payload, msg.LenPayload)
+		// if sh.VerifyShardTransaction(tx, sign, 4) {
+		// 	Shardtxch <- tx
+		// }
+		Shardtxch <- tx
 	}
 }
 
 // read the messages and handle
-func handle(p *p2p.Peer, send chan p2p.Msg, ShardSignalch chan dt.ShardSignal, errChan chan p2p.Peer) {
+func handle(p *p2p.Peer, send chan p2p.Msg, ShardSignalch chan dt.ShardSignal, Shardtxch chan dt.ShardTransaction, errChan chan p2p.Peer) {
 	for {
 		msg, err := p.GetMsg()
 		if err != nil {
@@ -102,7 +109,7 @@ func handle(p *p2p.Peer, send chan p2p.Msg, ShardSignalch chan dt.ShardSignal, e
 			log.Println(err)
 			break
 		}
-		go handleMsg(msg, send, p, ShardSignalch)
+		go handleMsg(msg, send, p, ShardSignalch, Shardtxch)
 	}
 }
 

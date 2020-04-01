@@ -47,6 +47,7 @@ func FindPeers(host *PeerID) []PeerID {
 func queryDiscoveryService(servAddr string, localID *PeerID) ([]PeerID, error) {
 
 	// querying the discovery service
+	localID.ShardID = 0
 	conn, err := net.Dial("tcp", servAddr)
 	log.Println("Dialed the discovery server")
 	if err != nil {
