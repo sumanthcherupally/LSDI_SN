@@ -76,9 +76,12 @@ func queryDiscoveryService(servAddr string, localID *PeerID) ([]PeerID, error) {
 	for _, peer := range peers {
 		var s PeerID
 		s.IP = peer[:4]
-		s.PublicKey = peer[4:]
+		s.PublicKey = peer[4:69]
+		r := bytes.NewReader(peer[69:])
+		binary.Read(r, binary.LittleEndian, &s.ShardID)
 		p = append(p, s)
 	}
+	localID.ShardID = 0
 	return p, nil
 }
 
