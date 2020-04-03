@@ -5,7 +5,16 @@ import (
 	"Go-DAG-storageNode/p2p"
 	"Go-DAG-storageNode/serialize"
 	"Go-DAG-storageNode/storage"
+	"fmt"
 	"log"
+	"os"
+	"sync"
+	"time"
+)
+
+var (
+	f, _    = os.Create("temp/logFile.txt")
+	logLock sync.Mutex
 )
 
 // New ...
@@ -39,6 +48,10 @@ func handleMsg(msg p2p.Msg, send chan p2p.Msg, p *p2p.Peer, ShardSignalch chan d
 			tr := storage.AddTransaction(tx, sign)
 			if tr == 1 {
 				send <- msg
+				logLock.Lock()
+				f.WriteString(fmt.Sprintf("%d %d\n", time.Now().Minute(), time.Now().Second()))
+				logLock.Unlock()
+				fmt.Println(time.Now())
 			} else if tr == 2 {
 				var msg p2p.Msg
 				msg.ID = 34
