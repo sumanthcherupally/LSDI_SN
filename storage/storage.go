@@ -44,10 +44,14 @@ func AddTransaction(tx dt.Transaction, signature []byte) int {
 			if !okL || !okR {
 				log.Println("Orphan Transaction")
 				if !okL {
+					mux.Lock()
 					orphanedTransactions[left] = append(orphanedTransactions[left], node)
+					mux.Unlock()
 				}
 				if !okR {
+					mux.Lock()
 					orphanedTransactions[right] = append(orphanedTransactions[right], node)
+					mux.Unlock()
 				}
 				duplicationCheck = 2
 			} else {
