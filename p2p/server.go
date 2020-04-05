@@ -223,6 +223,7 @@ func (srv *Server) Run() {
 			srv.AddPeer(p)
 			srv.NewPeer <- *p
 		}
+		time.Sleep(time.Second)
 	}
 
 	var tempPeers []PeerID

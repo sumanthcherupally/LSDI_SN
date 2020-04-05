@@ -109,7 +109,7 @@ func handle(p *p2p.Peer, send chan p2p.Msg, ShardSignalch chan dt.ShardSignal, S
 			log.Println(err)
 			break
 		}
-		go handleMsg(msg, send, p, ShardSignalch, Shardtxch)
+		handleMsg(msg, send, p, ShardSignalch, Shardtxch)
 	}
 }
 
