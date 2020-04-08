@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"strconv"
@@ -316,7 +317,8 @@ func Send(msg Msg, peers []Peer) {
 			err = SendMsg(p.rw, msg)
 		}
 		if err != nil {
-			log.Println("problem sending to peer")
+			fmt.Println(err)
+			// log.Println("problem sending to peer")
 		}
 	}
 }

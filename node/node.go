@@ -49,9 +49,10 @@ func handleMsg(msg p2p.Msg, send chan p2p.Msg, p *p2p.Peer, ShardSignalch chan d
 			if tr == 1 {
 				send <- msg
 				logLock.Lock()
-				f.WriteString(fmt.Sprintf("%d %d\n", time.Now().Minute(), time.Now().Second()))
+				f.WriteString(fmt.Sprintf("%d %d %d\n", p.ID.IP, time.Now().Minute(), time.Now().Second()))
 				logLock.Unlock()
-				// fmt.Println(time.Now())
+				fmt.Println(p.ID.IP)
+				fmt.Println(time.Now())
 			} else if tr == 2 {
 				var msg p2p.Msg
 				msg.ID = 34
