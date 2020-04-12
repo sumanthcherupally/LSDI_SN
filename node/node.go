@@ -23,7 +23,7 @@ func New(hostID *p2p.PeerID) {
 	var srv p2p.Server
 	srv.HostID.PublicKey = hostID.PublicKey
 	hostID = &srv.HostID
-	srv.BroadcastMsg = make(chan p2p.Msg)
+	srv.BroadcastMsg = make(chan p2p.Msg, 20)
 	srv.NewPeer = make(chan p2p.Peer)
 	srv.RemovePeer = make(chan p2p.Peer)
 	srv.ShardingSignal = make(chan dt.ShardSignal)
@@ -51,8 +51,8 @@ func handleMsg(msg p2p.Msg, send chan p2p.Msg, p *p2p.Peer, ShardSignalch chan d
 				logLock.Lock()
 				f.WriteString(fmt.Sprintf("%d %d %d\n", p.ID.IP, time.Now().Minute(), time.Now().Second()))
 				logLock.Unlock()
-				fmt.Println(p.ID.IP)
-				fmt.Println(time.Now())
+				// fmt.Println(p.ID.IP)
+				// fmt.Println(time.Now())
 			} else if tr == 2 {
 				var msg p2p.Msg
 				msg.ID = 34

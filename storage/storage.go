@@ -5,6 +5,7 @@ import (
 	db "Go-DAG-storageNode/database"
 	"Go-DAG-storageNode/serialize"
 	"crypto/sha256"
+	"fmt"
 	"log"
 	"sync"
 )
@@ -34,6 +35,7 @@ func AddTransaction(tx dt.Transaction, signature []byte) int {
 		var tip [32]byte
 		if tx.LeftTip == tip && tx.RightTip == tip {
 			duplicationCheck = 1
+			fmt.Println("Genesis here")
 			db.AddToDb(Txid, s)
 		} else {
 			left := serialize.EncodeToHex(tx.LeftTip[:])
