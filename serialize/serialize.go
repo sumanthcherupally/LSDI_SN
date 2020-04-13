@@ -16,7 +16,10 @@ func EncodeToHex(data []byte) string {
 
 //DecodeToBytes converts string to byte slice
 func DecodeToBytes(data string) []byte {
-	b, _ := hex.DecodeString(data)
+	b, err := hex.DecodeString(data)
+	if err != nil {
+		log.Print(err)
+	}
 	return b
 }
 

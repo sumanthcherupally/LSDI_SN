@@ -23,7 +23,7 @@ func New(hostID *p2p.PeerID) {
 	var srv p2p.Server
 	srv.HostID.PublicKey = hostID.PublicKey
 	hostID = &srv.HostID
-	srv.BroadcastMsg = make(chan p2p.Msg, 20)
+	srv.BroadcastMsg = make(chan p2p.Msg)
 	srv.NewPeer = make(chan p2p.Peer)
 	srv.RemovePeer = make(chan p2p.Peer)
 	srv.ShardingSignal = make(chan dt.ShardSignal)

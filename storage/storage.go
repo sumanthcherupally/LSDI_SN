@@ -4,6 +4,7 @@ import (
 	dt "Go-DAG-storageNode/DataTypes"
 	db "Go-DAG-storageNode/database"
 	"Go-DAG-storageNode/serialize"
+	"bytes"
 	"crypto/sha256"
 	"fmt"
 	"log"
@@ -42,20 +43,41 @@ func AddTransaction(tx dt.Transaction, signature []byte) int {
 			right := serialize.EncodeToHex(tx.RightTip[:])
 			okL := CheckifPresentDb(tx.LeftTip[:])
 			okR := CheckifPresentDb(tx.RightTip[:])
-
-			if !okL || !okR {
-				log.Println("Orphan Transaction")
+			if !okR || !okL {
 				if !okL {
+					duplicateOrphanTx := false
+					log.Println("left orphan transaction")
+					log.Println(left)
 					mux.Lock()
-					orphanedTransactions[left] = append(orphanedTransactions[left], node)
+					for _, orphantx := range orphanedTransactions[left] {
+						if bytes.Compare(orphantx.Signature, node.Signature) == 0 {
+							duplicateOrphanTx = true
+							break
+						}
+					}
+					if !duplicateOrphanTx {
+						orphanedTransactions[left] = append(orphanedTransactions[left], node)
+					}
 					mux.Unlock()
+					duplicationCheck = 2
 				}
 				if !okR {
+					duplicateOrphanTx := false
+					log.Println("right orphan transaction")
+					log.Println(right)
 					mux.Lock()
-					orphanedTransactions[right] = append(orphanedTransactions[right], node)
+					for _, orphantx := range orphanedTransactions[right] {
+						if bytes.Compare(orphantx.Signature, node.Signature) == 0 {
+							duplicateOrphanTx = true
+							break
+						}
+					}
+					if !duplicateOrphanTx {
+						orphanedTransactions[right] = append(orphanedTransactions[right], node)
+					}
 					mux.Unlock()
+					duplicationCheck = 2
 				}
-				duplicationCheck = 2
 			} else {
 				duplicationCheck = 1
 				db.AddToDb(Txid, s)
