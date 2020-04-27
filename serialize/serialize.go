@@ -29,11 +29,12 @@ func Encode(t interface{}) []byte {
 	var b []byte
 	switch tx := t.(type) {
 	case dt.Transaction:
-		v := reflect.ValueOf(&tx).Elem()
-		for i := 0; i < v.NumField(); i++ {
-			value := v.Field(i)
-			b = append(b, EncodeToBytes(value.Interface())...)
-		}
+		b = append(b, EncodeToBytes(tx.Timestamp)...)
+		b = append(b, EncodeToBytes(tx.Hash)...)
+		b = append(b, EncodeToBytes(tx.From)...)
+		b = append(b, EncodeToBytes(tx.LeftTip)...)
+		b = append(b, EncodeToBytes(tx.RightTip)...)
+		b = append(b, EncodeToBytes(tx.Nonce)...)
 	case dt.ShardTransaction:
 		v := reflect.ValueOf(&tx).Elem()
 		for i := 0; i < v.NumField(); i++ {
