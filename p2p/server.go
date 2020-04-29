@@ -227,50 +227,9 @@ func (srv *Server) Run() {
 		time.Sleep(time.Second)
 	}
 
-	// var tempPeers []PeerID
-	// var currShardIds []uint32
-	// var dup bool
-
-	// go func() {
-	// 	for {
-	// 		_ = <-srv.ShardingSignal
-	// 		time.Sleep(50 * time.Second)
-	// 		// check for diversity of shardIDs in existing peers
-	// 		// connect with necessary peers
-
-	// 		temp := currShardIds[0]
-	// 		div := false
-
-	// 		for _, i := range currShardIds {
-	// 			if i != temp {
-	// 				div = true
-	// 			}
-	// 		}
-
-	// 		// check for diversity in peers
-	// 		if !div {
-	// 			for _, p := range tempPeers {
-	// 				if p.ShardID != temp {
-	// 					conn, err := srv.initiateConnection(p)
-	// 					if err != nil {
-	// 						log.Println(err)
-	// 					} else {
-	// 						p := newPeer(conn, p)
-	// 						srv.AddPeer(p)
-	// 						srv.NewPeer <- *p
-	// 					}
-	// 					break
-	// 				}
-	// 			}
-	// 		}
-
-	// 		// clear the slices
-	// 		tempPeers = nil
-	// 		currShardIds = nil
-
-	// 		// voila, one less thing
-	// 	}
-	// }()
+	var tempPeers []PeerID
+	var currShardIds []uint32
+	var dup bool
 
 	for {
 		select {
@@ -281,27 +240,27 @@ func (srv *Server) Run() {
 			log.Fatal("error")
 		case p := <-srv.RemovePeer:
 			srv.removePeer(p)
-			// case tx := <-srv.ShardTransactions:
-			// 	var p PeerID
-			// 	p.IP = make([]byte, 4)
-			// 	p.PublicKey = make([]byte, 65)
-			// 	copy(p.IP, tx.IP[:])
-			// 	copy(p.PublicKey, tx.From[:])
-			// 	dup = false
-			// 	for _, peer := range tempPeers {
-			// 		if peer.Equals(p) {
-			// 			dup = true
-			// 		}
-			// 	}
-			// 	if !dup {
-			// 		log.Println("shard transaction recieved", tx.ShardNo)
-			// 		if srv.findPeer(p, tx.ShardNo) {
-			// 			tempPeers = append(tempPeers, p)
-			// 			currShardIds = append(currShardIds, tx.ShardNo)
-			// 		} else {
-			// 			tempPeers = append(tempPeers, p)
-			// 		}
-			// 	}
+		case tx := <-srv.ShardTransactions:
+			var p PeerID
+			p.IP = make([]byte, 4)
+			p.PublicKey = make([]byte, 65)
+			copy(p.IP, tx.IP[:])
+			copy(p.PublicKey, tx.From[:])
+			dup = false
+			for _, peer := range tempPeers {
+				if peer.Equals(p) {
+					dup = true
+				}
+			}
+			if !dup {
+				log.Println("shard transaction recieved", tx.ShardNo)
+				if srv.findPeer(p, tx.ShardNo) {
+					tempPeers = append(tempPeers, p)
+					currShardIds = append(currShardIds, tx.ShardNo)
+				} else {
+					tempPeers = append(tempPeers, p)
+				}
+			}
 		}
 	}
 }

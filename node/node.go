@@ -98,6 +98,12 @@ func handleMsg(msg p2p.Msg, send chan p2p.Msg, p *p2p.Peer, ShardSignalch chan d
 				}
 			}
 		}
+	} else if msg.ID == 36 {
+		tx, _ := serialize.Decode36(msg.Payload, msg.LenPayload)
+		// if sh.VerifyShardTransaction(tx, sign, 4) {
+		// 	Shardtxch <- tx
+		// }
+		Shardtxch <- tx
 	}
 }
 
