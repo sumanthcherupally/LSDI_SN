@@ -18,11 +18,18 @@ func main() {
 		PrivateKey = Crypto.GenerateKeys()
 	}
 	database.OpenDB()
+	defer database.CloseDB()
 	var ID p2p.PeerID
 	ID.PublicKey = Crypto.SerializePublicKey(&PrivateKey.PublicKey)
 	v := constructGenisis()
 	storage.AddTransaction(v.Tx, v.Signature)
-	node.New(&ID)
+	storageCh := make(chan dt.ForwardTx, 20)
+	ch := node.New(&ID, storageCh)
+	// initializing the storage layer
+	var st storage.Server
+	st.ForwardingCh = ch
+	st.ServerCh = storageCh
+	go st.Run()
 	query.StartServer()
 }
 

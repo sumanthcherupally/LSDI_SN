@@ -1,6 +1,8 @@
 package database
 
 import (
+	"log"
+
 	badger "github.com/dgraph-io/badger"
 )
 
@@ -8,7 +10,13 @@ var db *badger.DB
 
 // OpenDB opens the database
 func OpenDB() {
-	db, _ = badger.Open(badger.DefaultOptions("/tmp/badger"))
+	var err error
+	db, err = badger.Open(badger.DefaultOptions("/tmp/badger"))
+	log.Println(err)
+}
+
+func CloseDB() {
+	db.Close()
 }
 
 //AddToDb Adds to the database key value pair
@@ -41,7 +49,6 @@ func GetAllKeys() [][]byte {
 	if err1 != nil {
 		panic(err1)
 	}
-	// fmt.Println(len(Keys))
 	return Keys
 
 	// db, err := sql.Open("mysql","Sumanth:sumanth@tcp(127.0.0.1:3306)/dag")

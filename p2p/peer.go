@@ -59,6 +59,11 @@ func newPeer(c net.Conn, pID PeerID) *Peer {
 	return &peer
 }
 
+// GetPeerConn returns the peer connection
+func (p *Peer) GetPeerConn() net.Conn {
+	return p.rw
+}
+
 // Send ...
 func (p *Peer) Send(msg Msg) error {
 	p.mux.Lock()
@@ -143,9 +148,6 @@ func (p *Peer) run() {
 	writeErr = make(chan error)
 	readErr = make(chan error)
 
-	var wg sync.WaitGroup
-	wg.Add(2)
-
 	go p.pingLoop(writeErr)
 	go p.readLoop(readErr)
 
@@ -158,5 +160,5 @@ func (p *Peer) run() {
 		log.Println(err)
 	}
 	close(p.closed)
-	wg.Wait()
+	time.Sleep(time.Second)
 }

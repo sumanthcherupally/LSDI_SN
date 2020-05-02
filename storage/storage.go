@@ -3,16 +3,30 @@ package storage
 import (
 	dt "Go-DAG-storageNode/DataTypes"
 	db "Go-DAG-storageNode/database"
+	"Go-DAG-storageNode/p2p"
 	"Go-DAG-storageNode/serialize"
 	"bytes"
 	"crypto/sha256"
 	"fmt"
 	"log"
+	"os"
 	"sync"
+	"time"
+)
+
+var (
+	f, _    = os.Create("temp/logFile.txt")
+	logLock sync.Mutex
 )
 
 var orphanedTransactions = make(map[string][]dt.Vertex)
 var mux sync.Mutex
+
+// Server ...
+type Server struct {
+	ForwardingCh chan p2p.Msg
+	ServerCh     chan dt.ForwardTx
+}
 
 //Hash returns the SHA256 hash value
 func Hash(b []byte) []byte {
@@ -122,4 +136,53 @@ func checkorphanedTransactions(h string, serializedTx []byte) {
 	delete(orphanedTransactions, h)
 	mux.Unlock()
 	return
+}
+
+// Run ...
+func (srv *Server) Run() {
+	for {
+		node := <-srv.ServerCh
+		if node.Forward {
+			dup := AddTransaction(node.Tx, node.Signature)
+			if dup == 1 {
+				logLock.Lock()
+				f.WriteString(fmt.Sprintf("%s %d %d\n", node.Peer.RemoteAddr().String(), time.Now().Minute(), time.Now().Second()))
+				logLock.Unlock()
+				var msg p2p.Msg
+				msg.ID = 32
+				msg.Payload = append(serialize.Encode(node.Tx), node.Signature...)
+				msg.LenPayload = uint32(len(msg.Payload))
+				srv.ForwardingCh <- msg
+			} else if dup == 2 {
+				var msg p2p.Msg
+				msg.ID = 34
+				if !CheckifPresentDb(node.Tx.LeftTip[:]) {
+					msg.Payload = node.Tx.LeftTip[:]
+					msg.LenPayload = uint32(len(msg.Payload))
+					p2p.SendMsg(node.Peer, msg)
+				}
+				if !CheckifPresentDb(node.Tx.RightTip[:]) {
+					msg.Payload = node.Tx.RightTip[:]
+					msg.LenPayload = uint32(len(msg.Payload))
+					p2p.SendMsg(node.Peer, msg)
+				}
+			}
+		} else {
+			dup := AddTransaction(node.Tx, node.Signature)
+			if dup == 2 {
+				var msg p2p.Msg
+				msg.ID = 34
+				if !CheckifPresentDb(node.Tx.LeftTip[:]) {
+					msg.Payload = node.Tx.LeftTip[:]
+					msg.LenPayload = uint32(len(msg.Payload))
+					p2p.SendMsg(node.Peer, msg)
+				}
+				if !CheckifPresentDb(node.Tx.RightTip[:]) {
+					msg.Payload = node.Tx.RightTip[:]
+					msg.LenPayload = uint32(len(msg.Payload))
+					p2p.SendMsg(node.Peer, msg)
+				}
+			}
+		}
+	}
 }
