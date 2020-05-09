@@ -231,6 +231,45 @@ func (srv *Server) Run() {
 	var currShardIds []uint32
 	var dup bool
 
+	go func() {
+		_ = <-srv.ShardingSignal
+		for {
+			_ = <-srv.ShardingSignal
+			log.Println("sharding signal recieved")
+			time.Sleep(2 * time.Second)
+			if len(currShardIds) > 0 {
+				temp := currShardIds[0]
+				div := false
+				for _, i := range currShardIds {
+					if i != temp {
+						div = true
+					}
+				}
+				// check for diversity in peers
+				if !div {
+					log.Println("shardIds not diverse")
+					for _, p := range tempPeers {
+						if p.ShardID != temp {
+							conn, err := srv.initiateConnection(p)
+							if err != nil {
+								log.Println(err)
+							} else {
+								p := newPeer(conn, p)
+								srv.AddPeer(p)
+								srv.NewPeer <- *p
+							}
+							break
+						}
+					}
+				}
+			}
+			// clear the slices
+			tempPeers = nil
+			currShardIds = nil
+		}
+
+	}()
+
 	for {
 		select {
 		// listen
@@ -244,6 +283,7 @@ func (srv *Server) Run() {
 			var p PeerID
 			p.IP = make([]byte, 4)
 			p.PublicKey = make([]byte, 65)
+			p.ShardID = tx.ShardNo
 			copy(p.IP, tx.IP[:])
 			copy(p.PublicKey, tx.From[:])
 			dup = false
@@ -277,7 +317,6 @@ func Send(msg Msg, peers []Peer) {
 		}
 		if err != nil {
 			fmt.Println(err)
-			// log.Println("problem sending to peer")
 		}
 	}
 }

@@ -12,7 +12,12 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"github.com/dgraph-io/badger"
 )
+
+// DB badger database
+type DB *badger.DB
 
 var (
 	f, _    = os.Create("temp/logFile.txt")
@@ -26,6 +31,7 @@ var mux sync.Mutex
 type Server struct {
 	ForwardingCh chan p2p.Msg
 	ServerCh     chan dt.ForwardTx
+	DB           *badger.DB
 }
 
 //Hash returns the SHA256 hash value
@@ -35,7 +41,7 @@ func Hash(b []byte) []byte {
 }
 
 //AddTransaction checks if transaction if already present in the dag, if not adds to dag and database and returns true else returns false
-func AddTransaction(tx dt.Transaction, signature []byte) int {
+func (srv *Server) AddTransaction(tx dt.Transaction, signature []byte) int {
 	// change this function for the storage node
 	var node dt.Vertex
 	var duplicationCheck int
@@ -44,19 +50,19 @@ func AddTransaction(tx dt.Transaction, signature []byte) int {
 	Txid := Hash(s)
 	h := serialize.EncodeToHex(Txid[:])
 	s = append(s, signature...)
-	if !CheckifPresentDb(Txid) { //Duplication check
+	if !CheckifPresentDb(srv.DB, Txid) { //Duplication check
 		node.Tx = tx
 		node.Signature = signature
 		var tip [32]byte
 		if tx.LeftTip == tip && tx.RightTip == tip {
 			duplicationCheck = 1
 			fmt.Println("Genesis here")
-			db.AddToDb(Txid, s)
+			db.AddToDb(srv.DB, Txid, s)
 		} else {
 			left := serialize.EncodeToHex(tx.LeftTip[:])
 			right := serialize.EncodeToHex(tx.RightTip[:])
-			okL := CheckifPresentDb(tx.LeftTip[:])
-			okR := CheckifPresentDb(tx.RightTip[:])
+			okL := CheckifPresentDb(srv.DB, tx.LeftTip[:])
+			okR := CheckifPresentDb(srv.DB, tx.RightTip[:])
 			if !okR || !okL {
 				if !okL {
 					duplicateOrphanTx := false
@@ -94,40 +100,35 @@ func AddTransaction(tx dt.Transaction, signature []byte) int {
 				}
 			} else {
 				duplicationCheck = 1
-				db.AddToDb(Txid, s)
+				db.AddToDb(srv.DB, Txid, s)
 			}
 		}
 	}
 	if duplicationCheck == 1 {
-		checkorphanedTransactions(h, s)
+		srv.checkorphanedTransactions(h, s)
 	}
 	return duplicationCheck
 }
 
 //GetTransactiondb Wrapper function for GetTransaction in db module
-func GetTransactiondb(Txid []byte) (dt.Transaction, []byte) {
-	stream := db.GetValue(Txid)
+func GetTransactiondb(DB *badger.DB, Txid []byte) (dt.Transaction, []byte) {
+	stream := db.GetValue(DB, Txid)
 	return serialize.Decode32(stream, uint32(len(stream)))
 }
 
 // CheckifPresentDb Wrapper function for CheckKey in db module
-func CheckifPresentDb(Txid []byte) bool {
-	return db.CheckKey(Txid)
-}
-
-//GetAllHashes Wrapper function for GetAllKeys in db module
-func GetAllHashes() [][]byte {
-	return db.GetAllKeys()
+func CheckifPresentDb(DB *badger.DB, Txid []byte) bool {
+	return db.CheckKey(DB, Txid)
 }
 
 //checkorphanedTransactions Checks if any other transaction already arrived has any relation with this transaction, Used in the AddTransaction function
-func checkorphanedTransactions(h string, serializedTx []byte) {
+func (srv *Server) checkorphanedTransactions(h string, serializedTx []byte) {
 	mux.Lock()
 	list, ok := orphanedTransactions[h]
 	mux.Unlock()
 	if ok {
 		for _, node := range list {
-			if AddTransaction(node.Tx, node.Signature) == 1 {
+			if srv.AddTransaction(node.Tx, node.Signature) == 1 {
 				log.Println("resolved Transaction")
 			}
 		}
@@ -143,7 +144,7 @@ func (srv *Server) Run() {
 	for {
 		node := <-srv.ServerCh
 		if node.Forward {
-			dup := AddTransaction(node.Tx, node.Signature)
+			dup := srv.AddTransaction(node.Tx, node.Signature)
 			if dup == 1 {
 				logLock.Lock()
 				f.WriteString(fmt.Sprintf("%s %d %d\n", node.Peer.RemoteAddr().String(), time.Now().Minute(), time.Now().Second()))
@@ -156,28 +157,28 @@ func (srv *Server) Run() {
 			} else if dup == 2 {
 				var msg p2p.Msg
 				msg.ID = 34
-				if !CheckifPresentDb(node.Tx.LeftTip[:]) {
+				if !CheckifPresentDb(srv.DB, node.Tx.LeftTip[:]) {
 					msg.Payload = node.Tx.LeftTip[:]
 					msg.LenPayload = uint32(len(msg.Payload))
 					p2p.SendMsg(node.Peer, msg)
 				}
-				if !CheckifPresentDb(node.Tx.RightTip[:]) {
+				if !CheckifPresentDb(srv.DB, node.Tx.RightTip[:]) {
 					msg.Payload = node.Tx.RightTip[:]
 					msg.LenPayload = uint32(len(msg.Payload))
 					p2p.SendMsg(node.Peer, msg)
 				}
 			}
 		} else {
-			dup := AddTransaction(node.Tx, node.Signature)
+			dup := srv.AddTransaction(node.Tx, node.Signature)
 			if dup == 2 {
 				var msg p2p.Msg
 				msg.ID = 34
-				if !CheckifPresentDb(node.Tx.LeftTip[:]) {
+				if !CheckifPresentDb(srv.DB, node.Tx.LeftTip[:]) {
 					msg.Payload = node.Tx.LeftTip[:]
 					msg.LenPayload = uint32(len(msg.Payload))
 					p2p.SendMsg(node.Peer, msg)
 				}
-				if !CheckifPresentDb(node.Tx.RightTip[:]) {
+				if !CheckifPresentDb(srv.DB, node.Tx.RightTip[:]) {
 					msg.Payload = node.Tx.RightTip[:]
 					msg.LenPayload = uint32(len(msg.Payload))
 					p2p.SendMsg(node.Peer, msg)

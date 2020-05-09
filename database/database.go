@@ -6,21 +6,22 @@ import (
 	badger "github.com/dgraph-io/badger"
 )
 
-var db *badger.DB
-
 // OpenDB opens the database
-func OpenDB() {
-	var err error
-	db, err = badger.Open(badger.DefaultOptions("/tmp/badger"))
-	log.Println(err)
+func OpenDB() *badger.DB {
+	db, err := badger.Open(badger.DefaultOptions("/tmp/badger"))
+	if err != nil {
+		log.Println(err)
+	}
+	return db
 }
 
-func CloseDB() {
+// CloseDB ...
+func CloseDB(db *badger.DB) {
 	db.Close()
 }
 
 //AddToDb Adds to the database key value pair
-func AddToDb(key []byte, value []byte) {
+func AddToDb(db *badger.DB, key []byte, value []byte) {
 	err1 := db.Update(func(txn *badger.Txn) error {
 		err := txn.Set(key, value)
 		if err != nil {
@@ -34,7 +35,7 @@ func AddToDb(key []byte, value []byte) {
 }
 
 // GetAllKeys ...
-func GetAllKeys() [][]byte {
+func GetAllKeys(db *badger.DB) [][]byte {
 	Keys := make([][]byte, 0)
 	err1 := db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
@@ -76,7 +77,7 @@ func GetAllKeys() [][]byte {
 }
 
 // GetValue returns transaction based on hash value.
-func GetValue(key []byte) []byte {
+func GetValue(db *badger.DB, key []byte) []byte {
 	var valCopy []byte
 	err1 := db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get(key)
@@ -157,7 +158,7 @@ func GetValue(key []byte) []byte {
 // }
 
 //CheckKey checks if a key-value pair is present in the database, returns true if present else false
-func CheckKey(key []byte) bool {
+func CheckKey(db *badger.DB, key []byte) bool {
 	var valCopy bool
 	err1 := db.View(func(txn *badger.Txn) error {
 		_, err := txn.Get(key)

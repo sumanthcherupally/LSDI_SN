@@ -9,7 +9,7 @@ import (
 )
 
 // New ...
-func New(hostID *p2p.PeerID, sch chan dt.ForwardTx) chan p2p.Msg {
+func New(hostID *p2p.PeerID, sch chan dt.ForwardTx, db storage.DB) chan p2p.Msg {
 
 	var srv p2p.Server
 	srv.HostID.PublicKey = hostID.PublicKey
@@ -24,42 +24,18 @@ func New(hostID *p2p.PeerID, sch chan dt.ForwardTx) chan p2p.Msg {
 	go func() {
 		for {
 			p := <-srv.NewPeer
-			go handle(&p, srv.BroadcastMsg, srv.ShardingSignal, srv.ShardTransactions, srv.RemovePeer, sch)
+			go handle(&p, srv.BroadcastMsg, srv.ShardingSignal, srv.ShardTransactions, srv.RemovePeer, sch, db)
 		}
 	}()
 	return srv.BroadcastMsg
 }
 
-func handleMsg(msg p2p.Msg, send chan p2p.Msg, p *p2p.Peer, ShardSignalch chan dt.ShardSignal, Shardtxch chan dt.ShardTransaction, sch chan dt.ForwardTx) {
+func handleMsg(msg p2p.Msg, send chan p2p.Msg, p *p2p.Peer, ShardSignalch chan dt.ShardSignal, Shardtxch chan dt.ShardTransaction, sch chan dt.ForwardTx, db storage.DB) {
 	// check for transactions or request for transactions
 	if msg.ID == 32 {
 		// transaction
 		tx, sign := serialize.Decode32(msg.Payload, msg.LenPayload)
 		if validTransaction(tx, sign) {
-			// tr := storage.AddTransaction(tx, sign)
-			// if tr == 1 {
-			// 	send <- msg
-			// logLock.Lock()
-			// f.WriteString(fmt.Sprintf("%d %d %d\n", p.ID.IP, time.Now().Minute(), time.Now().Second()))
-			// logLock.Unlock()
-			// 	// fmt.Println(p.ID.IP)
-			// 	// fmt.Println(time.Now())
-			// } else if tr == 2 {
-			// var msg p2p.Msg
-			// msg.ID = 34
-			// if !storage.CheckifPresentDb(tx.LeftTip[:]) {
-			// 	msg.Payload = tx.LeftTip[:]
-			// 	msg.LenPayload = uint32(len(msg.Payload))
-			// 	p.Send(msg)
-			// }
-			// if !storage.CheckifPresentDb(tx.RightTip[:]) {
-			// 	msg.Payload = tx.RightTip[:]
-			// 	msg.LenPayload = uint32(len(msg.Payload))
-			// 	p.Send(msg)
-			// }
-			// } else if tr == 0 {
-			// 	fmt.Println("Duplicate detected")
-			// }
 			var sTx dt.ForwardTx
 			sTx.Tx = tx
 			sTx.Signature = sign
@@ -72,31 +48,16 @@ func handleMsg(msg p2p.Msg, send chan p2p.Msg, p *p2p.Peer, ShardSignalch chan d
 		hash := msg.Payload
 		var replyMsg p2p.Msg
 		replyMsg.ID = 33
-		if storage.CheckifPresentDb(hash) {
-			tx, sign := storage.GetTransactiondb(hash)
+		if storage.CheckifPresentDb(db, hash) {
+			tx, sign := storage.GetTransactiondb(db, hash)
 			replyMsg.Payload = append(serialize.Encode(tx), sign...)
+			replyMsg.LenPayload = uint32(len(replyMsg.Payload))
+			p.Send(replyMsg)
 		}
-		replyMsg.LenPayload = uint32(len(replyMsg.Payload))
-		p.Send(replyMsg)
 	} else if msg.ID == 33 {
 		// reply to a request sync transaction
 		tx, sign := serialize.Decode32(msg.Payload, msg.LenPayload)
 		if validTransaction(tx, sign) {
-			// tr := storage.AddTransaction(tx, sign)
-			// if tr == 2 {
-			// 	var msg p2p.Msg
-			// 	msg.ID = 34
-			// 	if !storage.CheckifPresentDb(tx.LeftTip[:]) {
-			// 		msg.Payload = tx.LeftTip[:]
-			// 		msg.LenPayload = uint32(len(msg.Payload))
-			// 		p.Send(msg)
-			// 	}
-			// 	if !storage.CheckifPresentDb(tx.RightTip[:]) {
-			// 		msg.Payload = tx.RightTip[:]
-			// 		msg.LenPayload = uint32(len(msg.Payload))
-			// 		p.Send(msg)
-			// 	}
-			// }
 			var sTx dt.ForwardTx
 			sTx.Tx = tx
 			sTx.Signature = sign
@@ -110,11 +71,17 @@ func handleMsg(msg p2p.Msg, send chan p2p.Msg, p *p2p.Peer, ShardSignalch chan d
 		// 	Shardtxch <- tx
 		// }
 		Shardtxch <- tx
+	} else if msg.ID == 35 {
+		signal, _ := serialize.Decode35(msg.Payload, msg.LenPayload)
+		select {
+		case ShardSignalch <- signal:
+		default:
+		}
 	}
 }
 
 // read the messages and handle
-func handle(p *p2p.Peer, send chan p2p.Msg, ShardSignalch chan dt.ShardSignal, Shardtxch chan dt.ShardTransaction, errChan chan p2p.Peer, sch chan dt.ForwardTx) {
+func handle(p *p2p.Peer, send chan p2p.Msg, ShardSignalch chan dt.ShardSignal, Shardtxch chan dt.ShardTransaction, errChan chan p2p.Peer, sch chan dt.ForwardTx, db storage.DB) {
 	for {
 		msg, err := p.GetMsg()
 		if err != nil {
@@ -122,7 +89,7 @@ func handle(p *p2p.Peer, send chan p2p.Msg, ShardSignalch chan dt.ShardSignal, S
 			log.Println(err)
 			break
 		}
-		handleMsg(msg, send, p, ShardSignalch, Shardtxch, sch)
+		handleMsg(msg, send, p, ShardSignalch, Shardtxch, sch, db)
 	}
 }
 

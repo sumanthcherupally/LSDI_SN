@@ -6,7 +6,6 @@ import (
 	"Go-DAG-storageNode/database"
 	"Go-DAG-storageNode/node"
 	"Go-DAG-storageNode/p2p"
-	"Go-DAG-storageNode/query"
 	"Go-DAG-storageNode/storage"
 )
 
@@ -17,20 +16,22 @@ func main() {
 	} else {
 		PrivateKey = Crypto.GenerateKeys()
 	}
-	database.OpenDB()
-	defer database.CloseDB()
 	var ID p2p.PeerID
 	ID.PublicKey = Crypto.SerializePublicKey(&PrivateKey.PublicKey)
 	v := constructGenisis()
-	storage.AddTransaction(v.Tx, v.Signature)
+	db := database.OpenDB()
+	defer database.CloseDB(db)
 	storageCh := make(chan dt.ForwardTx, 20)
-	ch := node.New(&ID, storageCh)
+	ch := node.New(&ID, storageCh, db)
 	// initializing the storage layer
 	var st storage.Server
 	st.ForwardingCh = ch
 	st.ServerCh = storageCh
+	st.DB = db
+	st.AddTransaction(v.Tx, v.Signature)
 	go st.Run()
-	query.StartServer()
+	// query.StartServer()
+	select {}
 }
 
 func constructGenisis() dt.Vertex {
