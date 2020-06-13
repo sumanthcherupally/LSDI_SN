@@ -6,6 +6,7 @@ import (
 	"Go-DAG-storageNode/database"
 	"Go-DAG-storageNode/node"
 	"Go-DAG-storageNode/p2p"
+	"Go-DAG-storageNode/query"
 	"Go-DAG-storageNode/storage"
 )
 
@@ -30,8 +31,7 @@ func main() {
 	st.DB = db
 	st.AddTransaction(v.Tx, v.Signature)
 	go st.Run()
-	// query.StartServer()
-	select {}
+	query.Run(db)
 }
 
 func constructGenisis() dt.Vertex {

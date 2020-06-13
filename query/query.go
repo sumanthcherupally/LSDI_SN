@@ -8,6 +8,9 @@ import (
 	"net/http"
 )
 
+// DB is Database of Transactions
+var DB storage.DB
+
 type verifyQuery struct {
 	Txid string
 }
@@ -28,7 +31,7 @@ func handleQuery(w http.ResponseWriter, r *http.Request) {
 	}
 
 	Resp := verifyQuery{}
-	tx, _ := storage.GetTransactiondb([]byte(Resp.Txid))
+	tx, _ := storage.GetTransactiondb(DB, []byte(Resp.Txid))
 	qq := send{}
 	qq.Hash = Crypto.EncodeToHex(tx.Hash[:])
 	ww, err := json.Marshal(qq)
@@ -40,8 +43,9 @@ func handleQuery(w http.ResponseWriter, r *http.Request) {
 	w.Write(ww)
 }
 
-// StartServer serves the http requests for transactions
-func StartServer() {
+// Run serves the http requests for transactions
+func Run(db storage.DB) {
+	DB = db
 	mux := http.NewServeMux()
 	mux.HandleFunc("/query", handleQuery)
 	//Log.Printf("Started server for querying HTTP POST...\n")
