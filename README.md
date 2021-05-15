@@ -8,8 +8,6 @@ LSDI (lightweight and scalable DAG based blockchain for verifying IoT data integ
 - Usage
     - Prerequisites
     - Build
-    - API
-- Development
 
 ## Background
 
