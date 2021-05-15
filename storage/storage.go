@@ -1,10 +1,10 @@
 package storage
 
 import (
-	dt "Go-DAG-storageNode/DataTypes"
-	db "Go-DAG-storageNode/database"
-	"Go-DAG-storageNode/p2p"
-	"Go-DAG-storageNode/serialize"
+	dt "LSDI_SN/DataTypes"
+	db "LSDI_SN/database"
+	"LSDI_SN/p2p"
+	"LSDI_SN/serialize"
 	"bytes"
 	"crypto/sha256"
 	"fmt"
@@ -139,7 +139,7 @@ func (srv *Server) checkorphanedTransactions(h string, serializedTx []byte) {
 	return
 }
 
-// Run ...
+// Run spawns a storage server which spins on a channel (ServerCh) to accept transactions and add them to the DAG.
 func (srv *Server) Run() {
 	for {
 		node := <-srv.ServerCh

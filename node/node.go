@@ -1,14 +1,17 @@
 package node
 
 import (
-	dt "Go-DAG-storageNode/DataTypes"
-	"Go-DAG-storageNode/p2p"
-	"Go-DAG-storageNode/serialize"
-	"Go-DAG-storageNode/storage"
+	dt "LSDI_SN/DataTypes"
+	"LSDI_SN/p2p"
+	"LSDI_SN/serialize"
+	"LSDI_SN/storage"
 	"log"
 )
 
-// New ...
+// New is used to create the blockchain node
+// It spins up a server to accept transactions and returns a channel for client to broadcast transactions
+// Input : p2pID(contains IP address), PrivKey(PrivateKey)
+// Output : channel that accepts transaction to be broadcasted
 func New(hostID *p2p.PeerID, sch chan dt.ForwardTx, db storage.DB) chan p2p.Msg {
 
 	var srv p2p.Server
@@ -67,9 +70,6 @@ func handleMsg(msg p2p.Msg, send chan p2p.Msg, p *p2p.Peer, ShardSignalch chan d
 		}
 	} else if msg.ID == 36 {
 		tx, _ := serialize.Decode36(msg.Payload, msg.LenPayload)
-		// if sh.VerifyShardTransaction(tx, sign, 4) {
-		// 	Shardtxch <- tx
-		// }
 		Shardtxch <- tx
 	} else if msg.ID == 35 {
 		signal, _ := serialize.Decode35(msg.Payload, msg.LenPayload)

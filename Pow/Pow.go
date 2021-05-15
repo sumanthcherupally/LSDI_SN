@@ -1,9 +1,9 @@
 package pow
 
 import (
-	"Go-DAG-storageNode/Crypto"
-	dt "Go-DAG-storageNode/DataTypes"
-	"Go-DAG-storageNode/serialize"
+	"LSDI_SN/Crypto"
+	dt "LSDI_SN/DataTypes"
+	"LSDI_SN/serialize"
 	"strings"
 )
 

@@ -1,7 +1,7 @@
 package p2p
 
 import (
-	dt "Go-DAG-storageNode/DataTypes"
+	dt "LSDI_SN/DataTypes"
 	"bytes"
 	"encoding/binary"
 	"errors"
@@ -40,7 +40,7 @@ func validateHandshakeMsg(reply []byte) (PeerID, error) {
 	return p, nil
 }
 
-// Server ...
+// Server structure enables the critical network functionality
 type Server struct {
 	peers             []Peer
 	maxPeers          uint32
@@ -55,7 +55,7 @@ type Server struct {
 	// ...
 }
 
-// GetRandomPeer ...
+// GetRandomPeer returns a random peer from the list of peers
 func (srv *Server) GetRandomPeer() Peer {
 	var p Peer
 	for {

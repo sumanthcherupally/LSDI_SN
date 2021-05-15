@@ -1,10 +1,10 @@
 package sharding
 
 import (
-	"Go-DAG-storageNode/Crypto"
-	dt "Go-DAG-storageNode/DataTypes"
-	pow "Go-DAG-storageNode/Pow"
-	"Go-DAG-storageNode/serialize"
+	"LSDI_SN/Crypto"
+	dt "LSDI_SN/DataTypes"
+	pow "LSDI_SN/Pow"
+	"LSDI_SN/serialize"
 	"log"
 	"time"
 )

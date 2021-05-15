@@ -1,13 +1,13 @@
 package main
 
 import (
-	"Go-DAG-storageNode/Crypto"
-	dt "Go-DAG-storageNode/DataTypes"
-	"Go-DAG-storageNode/database"
-	"Go-DAG-storageNode/node"
-	"Go-DAG-storageNode/p2p"
-	"Go-DAG-storageNode/query"
-	"Go-DAG-storageNode/storage"
+	"LSDI_SN/Crypto"
+	dt "LSDI_SN/DataTypes"
+	"LSDI_SN/database"
+	"LSDI_SN/node"
+	"LSDI_SN/p2p"
+	"LSDI_SN/query"
+	"LSDI_SN/storage"
 )
 
 func main() {

@@ -1,8 +1,8 @@
 package query
 
 import (
-	"Go-DAG-storageNode/Crypto"
-	"Go-DAG-storageNode/storage"
+	"LSDI_SN/Crypto"
+	"LSDI_SN/storage"
 	"encoding/json"
 	"log"
 	"net/http"

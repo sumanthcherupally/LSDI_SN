@@ -1,7 +1,7 @@
 package sync
 
 import (
-	"Go-DAG-storageNode/p2p"
+	"LSDI_SN/p2p"
 	"encoding/json"
 	"log"
 )
